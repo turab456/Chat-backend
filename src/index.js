@@ -1,23 +1,26 @@
 import dotenv from "dotenv";
-import connectDB from "./db/index.js";
+import {connectSequelize} from "./db/index.js";
 import { app } from "./app.js";
 import { PORT } from "./constants.js";
+import syncDatabase from "./utils/dbSync.js";
 
 dotenv.config({
   path: "./.env",
 });
 
-connectDB()
+connectSequelize()
   .then(() => {
     app.on("error", (error) => {
       console.log(`Error : ${error}`);
       throw error;
     });
 
+    syncDatabase();
+
     app.listen(PORT, () => {
       console.log(`🔥 server is running at port ${PORT}`);
     });
   })
   .catch((err) => {
-    console.log(`❌ MongoDB connection failed ${err}`);
+    console.log(`❌ Postgressql DB connection failed ${err}`);
   });

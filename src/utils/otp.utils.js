@@ -20,5 +20,5 @@ export const sendEmailOtp = async (email, otp) => {
 };
 
 export const sendSmsOtp = async (mobile, otp) => {
-  // Integrate an SMS provider like Twilio
+  // Integrate an SMS provider like Twilio / MSG91
 };
