@@ -1,5 +1,6 @@
 import { DataTypes } from "sequelize";
 import { sequelize } from "../../db/index.js";
+import PlansPackage from "./plans_package.model.js";
 
 const PlanType = sequelize.define(
   "plan_type",
@@ -24,3 +25,10 @@ const PlanType = sequelize.define(
 );
 
 export default PlanType;
+
+PlanType.hasOne(PlansPackage, {
+  foreignKey: "plan_type_id_fk",
+  onDelete: "CASCADE",
+  onUpdate: "CASCADE",
+});
+

@@ -11,7 +11,8 @@
     "start": "node -r dotenv/config --experimental-json-modules src/index.js",
     "build": "npx babel src -d dist",
     "dev": "nodemon -r dotenv/config --experimental-json-modules src/index.js",
-    "test": "jest",
+    "test_": "jest",
+    "test": "jest --runInBand --forceExit --detectOpenHandles",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
     "test:update": "jest --updateSnapshot",
@@ -32,7 +33,9 @@
     "jest-watch-typeahead": "^2.2.2",
     "nodemon": "^3.1.9",
     "prettier": "^3.4.2",
-    "sequelize-cli": "^6.6.2"
+    "sequelize-cli": "^6.6.2",
+    "sequelize-mock": "^0.10.2",
+    "supertest": "^7.0.0"
   },
   "dependencies": {
     "bcrypt": "^5.1.1",
