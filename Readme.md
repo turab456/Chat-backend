@@ -20,7 +20,7 @@ This project is a backend for a Learning Management System (LMS) built using Nod
 
 1. Clone the repository:
     ```sh
-    git clone https://github.com/your-repo/lms-backend.git
+    git clone https://github.com/Moiz-Maskan-Tech/lms_server.git
     cd lms-backend
     ```
 
@@ -122,3 +122,6 @@ src/
   utils/
 tests/
   sum.test.js
+
+
+`` command to run the test cases example : npm test tests/super_admin/superAdmin.test.js

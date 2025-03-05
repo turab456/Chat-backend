@@ -1,7 +1,5 @@
 import { DataTypes } from "sequelize";
 import { sequelize } from "../../db/index.js";
-// import syncDatabase from "../../utils/dbSync.js";
-// import PlanType from "./plan_type.model.js";
 
 const PlansPackage = sequelize.define(
   "plans_package",
