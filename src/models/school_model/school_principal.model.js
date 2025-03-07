@@ -13,7 +13,7 @@ const SchoolPrincipal = sequelize.define(
     },
     // this is the foreign key for the role ids
     principal_user_role_id: {
-      type: DataTypes.INTEGER,
+      type: DataTypes.UUID,
       allowNull: false,
       references: {
         model: "user_role",

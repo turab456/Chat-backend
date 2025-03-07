@@ -4,6 +4,7 @@ import "../models/super_admin/super_admin.model.js";
 import "../associations_model/plans_model/plans.associations.js";
 import "../models/user_roles.model.js";
 import "../associations_model/school_model/school_owner.associations.js";
+import "../models/common_model/users.model.js"
 import { SuperAdminAssociation } from "../associations_model/super_admin/super_admin.association.js";
 
 const syncDatabase = async (alter = true) => {

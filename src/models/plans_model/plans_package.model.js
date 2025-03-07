@@ -44,7 +44,7 @@ const PlansPackage = sequelize.define(
     // payment_id_fk : {},
     // This is the foreign key for the school ownwer
     school_owner_id_fk : {
-      type: DataTypes.INTEGER,
+      type: DataTypes.UUID,
       allowNull: false,
       references: {
         model: "school_owner",
