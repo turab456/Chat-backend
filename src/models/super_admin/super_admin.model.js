@@ -119,7 +119,7 @@ SuperAdmin.isPasswordCorrect = async function (password) {
 SuperAdmin.generateAccessToken = function () {
   return jwt.sign(
     {
-      id: this.id,
+      id: this.super_admin_id,
       email: this.email,
       full_name: this.full_name,
       role_id: this.role_id,
@@ -133,7 +133,7 @@ SuperAdmin.generateAccessToken = function () {
 
 // Instance method for generating refresh token
 SuperAdmin.generateRefreshToken = function () {
-  return jwt.sign({ id: this.id }, process.env.REFRESH_TOKEN_SECRET, {
+  return jwt.sign({ id: this.super_admin_id }, process.env.REFRESH_TOKEN_SECRET, {
     expiresIn: process.env.ACCESS_TOKEN_EXPIRES,
   });
 };

@@ -42,6 +42,20 @@ router.get("/seed", async (req, res) => {
   }
 });
 
+// router.route("/register").post(
+//   upload.fields([
+//     {
+//       name: "avatar",
+//       maxCount: 1,
+//     },
+//     {
+//       name: "coverImage",
+//       maxCount: 1,
+//     },
+//   ]),
+//   registerUser
+// );
+
 router.route("/getallusers").get(getAllPlanTypes);
 
 export default router;
