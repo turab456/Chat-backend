@@ -138,4 +138,10 @@ SuperAdmin.generateRefreshToken = function () {
   });
 };
 
+// ✅ Method to update last login timestamp
+SuperAdmin.prototype.updateLastLogin = async function () {
+  this.last_login = new Date();
+  await this.save();
+};
+
 export default SuperAdmin;

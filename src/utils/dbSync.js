@@ -8,12 +8,14 @@ import "../models/common_model/users.model.js";
 import "../models/common_model/currency.model.js";
 import "../models/common_model/language.model.js";
 import { SuperAdminAssociation } from "../associations_model/super_admin/super_admin.association.js";
-import updateCurrencies from "./updateCurrency.utils.js";
+// import updateCurrencies from "./updateCurrency.utils.js";
+// import seedLanguages from "../scripts/seedLanguages.js";
 
 const syncDatabase = async (alter = true) => {
   try {
     SuperAdminAssociation();
-    updateCurrencies();
+    // updateCurrencies();
+    // seedLanguages();
     await sequelize.sync({ alter }); // force : true
     console.log("✅ Database synced successfully.");
   } catch (error) {

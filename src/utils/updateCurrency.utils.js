@@ -44,7 +44,11 @@ export default async function updateCurrencies() {
             exchange_rate: rate,
             is_active: true,
           },
-          { where: { code: currencyCode } }
+          {
+            where: {
+              code: currencyCode,
+            },
+          }
         );
 
         // console.log(

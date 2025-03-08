@@ -12,3 +12,5 @@ export const password = String(process.env.PASSWORD);
 export const database = String(process.env.DATABASE_NAME);
 export const host = String(process.env.HOST);
 export const dialect = String(process.env.DILECT) || "postgres";
+export const ADMIN_BASE_URL = "/api/v1/admin";
+export const COMMON_BASE_URL = "/api/v1/common"
