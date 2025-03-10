@@ -21,7 +21,7 @@ app.use(express.static("public"));
 app.use(cookieParser());
 app.use(requestLogger);
 app.use(limiter); // Enhance security by adding request rate capping for APIs
-app.use(validateAndSanitize); // Middleware to validate and sanitize query parameters for the API
+// app.use(validateAndSanitize); // Middleware to validate and sanitize query parameters for the API
 // Middleware for logging requests
 
 // Handle CSP Violation Reports
@@ -35,7 +35,7 @@ app.use(helmetMiddleware);
 
 import adminRouter from "./routes/admin/admin.routes.js";
 import commonRouter from "./routes/common/common.routes.js";
-import { ADMIN_BASE_URL, COMMON_BASE_URL } from "./constants.js";
+import { ADMIN_BASE_URL, COMMON_BASE_URL } from "./constants.cjs";
 
 // put the routes here
 app.use(ADMIN_BASE_URL,adminRouter)

@@ -5,7 +5,6 @@ import { validationResult, body, param, query } from "express-validator";
 import Currency from "../../models/common_model/currency.model.js";
 import logger from "../../utils/logger.utils.js";
 
-
 export const getCurrency = [
   query("page")
     .optional()
@@ -82,9 +81,17 @@ export const createCurrency = [
   body("code")
     .trim()
     .isLength({ min: 3, max: 3 })
-    .withMessage("Currency code must be exactly 3 characters"),
-  body("symbol").trim().notEmpty().withMessage("Currency symbol is required"),
+    .withMessage("Currency code must be exactly 3 letters")
+    .isAlpha()
+    .withMessage("Currency code must contain only letters"),
+  body("symbol")
+    .trim()
+    .notEmpty()
+    .withMessage("Currency symbol is required")
+    .isLength({ min: 1, max: 10 })
+    .withMessage("Currency symbol must be between 1 and 10 characters"),
   asyncHandler(async (req, res) => {
+    // Validate input
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
       logger.warn("Validation error creating currency", {
@@ -92,14 +99,19 @@ export const createCurrency = [
       });
       throw new ApiError(400, "Validation failed", errors.array());
     }
+
     const { name, code, symbol } = req.body;
     try {
+      // Check if the currency code already exists
       const existingCurrency = await Currency.findOne({ where: { code } });
       if (existingCurrency) {
         logger.warn("Duplicate currency code", { code });
         throw new ApiError(400, "Currency with this code already exists");
       }
+      // Create new currency
+      console.log("1");
       const newCurrency = await Currency.create({ name, code, symbol });
+      console.log("2");
       logger.info("Currency created", { currencyId: newCurrency.id });
       return res
         .status(201)
@@ -196,6 +208,7 @@ export const deleteCurrency = [
     const { id } = req.params;
     try {
       const currency = await Currency.findByPk(id);
+      console.log("1 : ",currency)
       if (!currency) {
         logger.warn("Currency not found for deletion", { currencyId: id });
         throw new ApiError(404, "Currency not found");

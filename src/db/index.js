@@ -1,5 +1,5 @@
 import { Sequelize } from "sequelize";
-import { database, username, password, host, dialect } from "../constants.js";
+import { database, username, password, host, dialect } from "../constants.cjs";
 
 const sequelize = new Sequelize(database, username, password, {
     host: host,
