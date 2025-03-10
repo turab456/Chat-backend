@@ -45,4 +45,4 @@ app.use(COMMON_BASE_URL,commonRouter)
 // Error logger middleware (should be after all other middlewares and routes)
 app.use(errorLogger);
 
-export default app ;
+export { app };

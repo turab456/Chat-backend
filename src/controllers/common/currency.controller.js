@@ -211,7 +211,8 @@ const deleteCurrency = [
       console.log("1 : ", currency);
       if (!currency) {
         logger.warn("Currency not found for deletion", { currencyId: id });
-        throw new ApiError(404, "Currency not found");
+        // Throw 404 error
+        throw new ApiError(404, "Currency not found!!");
       }
       await currency.destroy();
       logger.info("Currency deleted", { currencyId: id });
@@ -222,10 +223,15 @@ const deleteCurrency = [
       logger.error("Database error deleting currency", {
         error: error.message,
       });
-      throw new ApiError(500, "Internal Server Error", error);
+      // If error is already an instance of ApiError, rethrow it.
+      if (error instanceof ApiError) {
+        throw error;
+      }
+      throw new ApiError(500, "Internal Server Error!!!", error);
     }
   }),
 ];
+
 
 export {
   getCurrency,
