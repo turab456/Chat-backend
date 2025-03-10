@@ -5,7 +5,7 @@ import { validationResult, body, param, query } from "express-validator";
 import Currency from "../../models/common_model/currency.model.js";
 import logger from "../../utils/logger.utils.js";
 
-export const getCurrency = [
+const getCurrency = [
   query("page")
     .optional()
     .isInt({ min: 1 })
@@ -42,7 +42,7 @@ export const getCurrency = [
   }),
 ];
 
-export const getCurrencyById = [
+const getCurrencyById = [
   param("id")
     .exists()
     .withMessage("CurrencyId parameter is required")
@@ -76,7 +76,7 @@ export const getCurrencyById = [
   }),
 ];
 
-export const createCurrency = [
+const createCurrency = [
   body("name").trim().notEmpty().withMessage("Currency name is required"),
   body("code")
     .trim()
@@ -137,7 +137,7 @@ export const createCurrency = [
   }),
 ];
 
-export const updateCurrency = [
+const updateCurrency = [
   param("id")
     .exists()
     .withMessage("CurrencyId parameter is required")
@@ -191,7 +191,7 @@ export const updateCurrency = [
   }),
 ];
 
-export const deleteCurrency = [
+const deleteCurrency = [
   param("id")
     .exists()
     .withMessage("CurrencyId parameter is required")
@@ -208,7 +208,7 @@ export const deleteCurrency = [
     const { id } = req.params;
     try {
       const currency = await Currency.findByPk(id);
-      console.log("1 : ",currency)
+      console.log("1 : ", currency);
       if (!currency) {
         logger.warn("Currency not found for deletion", { currencyId: id });
         throw new ApiError(404, "Currency not found");
@@ -226,3 +226,11 @@ export const deleteCurrency = [
     }
   }),
 ];
+
+export {
+  getCurrency,
+  getCurrencyById,
+  createCurrency,
+  updateCurrency,
+  deleteCurrency,
+};

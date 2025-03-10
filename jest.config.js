@@ -10,7 +10,8 @@ export default {
     '^.+\\.mjs$': 'babel-jest'
   },
   moduleFileExtensions: ['js', 'mjs', 'json', 'node'],
-  testMatch: ['**/tests/**/*.test.[jt]s?(x)'],
+  // testMatch: ['**/tests/**/*.test.[jt]s?(x)'],
+  testMatch: ['**/src/tests/**/*.test.[jt]s?(x)'],
   setupFilesAfterEnv: [
     '@testing-library/jest-dom',
     'jest-extended'
@@ -24,7 +25,7 @@ export default {
   globalTeardown: '<rootDir>/jest/global-teardown.js',
   testTimeout: 30000,
   silent: false,
-  snapshotSerializers: ['<rootDir>/jest/snapshot-serializer.mjs'],
+  // snapshotSerializers: ['<rootDir>/jest/snapshot-serializer.cjs'],
   watchPlugins: ['jest-watch-typeahead/filename', 'jest-watch-typeahead/testname']
 };
 

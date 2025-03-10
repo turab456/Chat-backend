@@ -35,7 +35,7 @@ app.use(helmetMiddleware);
 
 import adminRouter from "./routes/admin/admin.routes.js";
 import commonRouter from "./routes/common/common.routes.js";
-import { ADMIN_BASE_URL, COMMON_BASE_URL } from "./constants.cjs";
+import { ADMIN_BASE_URL, COMMON_BASE_URL } from "./constants.js";
 
 // put the routes here
 app.use(ADMIN_BASE_URL,adminRouter)
@@ -45,4 +45,4 @@ app.use(COMMON_BASE_URL,commonRouter)
 // Error logger middleware (should be after all other middlewares and routes)
 app.use(errorLogger);
 
-export { app };
+export default app ;

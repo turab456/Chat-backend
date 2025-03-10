@@ -17,7 +17,7 @@ const validateIPAddress = (ip) => {
   return ipV4Pattern.test(ip) || ipV6Pattern.test(ip);
 };
 
-export const registerSuperAdmin = asyncHandler(async (req, res) => {
+const registerSuperAdmin = asyncHandler(async (req, res) => {
   // first_name
   // middle_name
   // last_name
@@ -285,12 +285,11 @@ const updateUserAvatar = asyncHandler(async (req, res) => {
 });
 
 export {
-  registerUser,
   loginUser,
   logoutUser,
   refreshAccessToken,
   ChangeCurrentPassword,
   updateAccountDetails,
   updateUserAvatar,
-  registerSuperAdmin,
+  registerSuperAdmin
 };
