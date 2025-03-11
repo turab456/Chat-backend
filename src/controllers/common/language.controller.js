@@ -1,0 +1,233 @@
+import { validationResult, body, param, query } from "express-validator";
+import { asyncHandler } from "../../utils/asyncHandler.utils.js";
+import logger from "../../utils/logger.utils.js";
+import { ApiError } from "../../utils/ApiError.utils.js";
+import Language from "../../models/common_model/language.model.js";
+import { ApiResponse } from "../../utils/ApiResponse.utils.js";
+
+/**
+ * Create a new language.
+ * Validates that the name and code meet requirements and that there is no duplicate entry.
+ *
+ * POST /api/languages
+ */
+const createLanguage = [
+  body("name")
+    .trim()
+    .notEmpty()
+    .isLength({ min: 2, max: 100 })
+    .withMessage("Language must be between 2 and 100 characters"),
+  body("code")
+    .trim()
+    .notEmpty()
+    .withMessage("Language code is required")
+    .isAlpha()
+    .withMessage("Language name must contain only letters")
+    .isLength({ min: 2, max: 10 })
+    .withMessage("Language code must be between 2 and 100 characters"),
+  body("is_active")
+    .optional()
+    .isBoolean()
+    .withMessage("is active must be a boolena"),
+
+  asyncHandler(async (req, res) => {
+    const error = validationResult(req);
+    if (!error.isEmpty) {
+      logger.warn("validation error creating language", {
+        error: error.array(),
+      });
+      throw new ApiError();
+    }
+
+    const { name, code, is_active } = req.body;
+
+    const duplicate = await Language.findOne({
+      where: {
+        $or: [{ name }, { code }],
+      },
+    });
+
+    if (duplicate) {
+      logger.warn("Duplicate language entry", { name, code });
+      throw new ApiError(409, "Language with this name or code already exists");
+    }
+
+    const language = await Language.create({
+      name,
+      code,
+      is_active,
+    });
+    logger.info("Language created", { id: language.id, name });
+
+    return new ApiResponse(201, { language }, "Language created succesfully");
+  }),
+];
+
+/**
+ * Get all languages with optional pagination.
+ *
+ * GET /api/languages?page=1&limit=10
+ */
+const getLanguages = [
+  query("page")
+    .optional()
+    .isInt({ min: 1 })
+    .withMessage("Page must be a positive integer"),
+  query("limit")
+    .optional()
+    .isInt({ min: 1, max: 30 })
+    .withMessage("Limit must be between 1 and 30"),
+
+  asyncHandler(async (req, res) => {
+    const error = validationResult(req);
+    if (!error.isEmpty()) {
+      logger.warn("Validation error fetching language", {
+        error: error.array(),
+      });
+      throw new ApiError(400, "Validation failed", error.array());
+    }
+
+    const { page = 1, limit = 10 } = req.query;
+    const offset = (page - 1) * limit;
+    const {rows , count} = await Language.findAndCountAll({
+      where: { is_active: true }, // commnet this to view all the languages
+      attributes: ["id", "name", "is_active"],
+      limit: parseInt(limit),
+      offset: parseInt(offset),
+      order: [["name", "ASC"]],
+    });
+    logger.info("Language fetched", { total: count, page, limit, count });
+    return res.json(new ApiResponse(200, { languages : rows, page, limit, count }));
+  }),
+];
+/**
+ * Get a language by its ID.
+ *
+ * GET /api/languages/:id
+ */
+const getLanguageById = [
+  param("id")
+    .exists()
+    .withMessage("Language ID parameter is required")
+    .isUUID()
+    .withMessage("Invalid language ID format"),
+
+  asyncHandler(async (req, res) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      logger.warn("Validation error fetching language by ID", {
+        errors: errors.array(),
+      });
+      throw new ApiError(400, "Validation failed", errors.array());
+    }
+
+    const { id } = req.params;
+    const language = await Language.findByPk(id);
+    if (!language) {
+      logger.warn("Language not found", { id });
+      throw new ApiError(404, "Language not found");
+    }
+
+    logger.info("Fetched language", { id });
+    return res.json(new ApiResponse(200, { language }));
+  }),
+];
+/**
+ * Update an existing language.
+ *
+ * PUT /api/languages/:id
+ */
+const updateLanguage = [
+  param("id")
+    .exists()
+    .withMessage("Language ID parameter is required")
+    .isUUID()
+    .withMessage("Invalid language ID format"),
+  body("name")
+    .optional()
+    .trim()
+    .notEmpty()
+    .withMessage("Language name cannot be empty")
+    .isLength({ min: 2, max: 100 })
+    .withMessage("Language name must be between 2 and 100 characters"),
+  body("code")
+    .optional()
+    .trim()
+    .isAlpha()
+    .withMessage("Language code must contain only letters")
+    .isLength({ min: 2, max: 10 })
+    .withMessage("Language code must be between 2 and 10 characters"),
+  body("is_active")
+    .optional()
+    .isBoolean()
+    .withMessage("is_active must be a boolean"),
+
+  asyncHandler(async (req, res) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      logger.warn("Validation error updating language", {
+        errors: errors.array(),
+      });
+      throw new ApiError(400, "Validation failed", errors.array());
+    }
+
+    const { id } = req.params;
+    const updatedData = req.body;
+    const language = await Language.findByPk(id);
+    if (!language) {
+      logger.warn("Language not found for update", { id });
+      throw new ApiError(404, "Language not found");
+    }
+
+    // Update the record. If you want to check uniqueness, consider checking here as well.
+    await language.update(updatedData);
+    logger.info("Language updated", { id });
+
+    return res.json(
+      new ApiResponse(200, { language }, "Language updated successfully")
+    );
+  }),
+];
+/**
+ * Delete a language.
+ *
+ * DELETE /api/languages/:id
+ */
+const deleteLanguage = [
+  param("id")
+    .exists()
+    .withMessage("Language ID parameter is required")
+    .isUUID()
+    .withMessage("Invalid language ID format"),
+
+  asyncHandler(async (req, res) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      logger.warn("Validation error deleting language", {
+        errors: errors.array(),
+      });
+      throw new ApiError(400, "Validation failed", errors.array());
+    }
+
+    const { id } = req.params;
+    const language = await Language.findByPk(id);
+    if (!language) {
+      logger.warn("Language not found for deletion", { id });
+      throw new ApiError(404, "Language not found");
+    }
+
+    await language.destroy();
+    logger.info("Language deleted", { id });
+    return res.json(
+      new ApiResponse(200, null, "Language deleted successfully")
+    );
+  }),
+];
+
+export {
+  createLanguage,
+  getLanguages,
+  getLanguageById,
+  updateLanguage,
+  deleteLanguage,
+};

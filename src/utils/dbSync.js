@@ -16,7 +16,7 @@ const syncDatabase = async (alter = true) => {
     SuperAdminAssociation();
     // updateCurrencies();
     // seedLanguages();
-    await sequelize.sync({ alter: true }); // force : true
+    await sequelize.sync({ alter }); // force : true
     console.log("✅ Database synced successfully.");
   } catch (error) {
     console.error("❌ Database sync failed:", error);
