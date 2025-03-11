@@ -27,18 +27,13 @@ const getCurrency = [
     const { page = 1, limit = 10 } = req.query;
     const offset = (page - 1) * limit;
 
-    try {
-      const { rows: currencies, count } = await Currency.findAndCountAll({
-        limit: parseInt(limit),
-        offset: parseInt(offset),
-        order: [["name", "ASC"]],
-      });
-      logger.info("fetched currencies", { total: count, page, limit });
-      res.json(new ApiResponse(200, { currencies, total: count, page, limit }));
-    } catch (error) {
-      logger.error("Error fetching currencies", { error: error.message });
-      throw new ApiError(500, "Internal server error");
-    }
+    const { rows: currencies, count } = await Currency.findAndCountAll({
+      limit: parseInt(limit),
+      offset: parseInt(offset),
+      order: [["name", "ASC"]],
+    });
+    logger.info("fetched currencies", { total: count, page, limit });
+    res.json(new ApiResponse(200, { currencies, total: count, page, limit }));
   }),
 ];
 
@@ -57,22 +52,15 @@ const getCurrencyById = [
       throw new ApiError(400, "Validation failed", errors.array());
     }
     const { id } = req.params;
-    try {
-      console.log("this is the id  : ", id);
-      const currency = await Currency.findByPk(id);
-      console.log("this is the incoming data from the database : ", currency);
-      if (!currency) {
-        logger.warn("Currency not found", { currencyId: id });
-        throw new ApiError(404, "Currency not found");
-      }
-      // Use new to instantiate ApiResponse
-      return res.json(new ApiResponse(200, { currency }));
-    } catch (error) {
-      logger.error("Database error fetching currency ID", {
-        error: error.message,
-      });
-      throw new ApiError(500, "Internal server error", error);
+    console.log("this is the id  : ", id);
+    const currency = await Currency.findByPk(id);
+    console.log("this is the incoming data from the database : ", currency);
+    if (!currency) {
+      logger.warn("Currency not found", { currencyId: id });
+      throw new ApiError(404, "Currency not found");
     }
+    // Use new to instantiate ApiResponse
+    return res.json(new ApiResponse(200, { currency }));
   }),
 ];
 
@@ -101,39 +89,26 @@ const createCurrency = [
     }
 
     const { name, code, symbol } = req.body;
-    try {
-      // Check if the currency code already exists
-      const existingCurrency = await Currency.findOne({ where: { code } });
-      if (existingCurrency) {
-        logger.warn("Duplicate currency code", { code });
-        throw new ApiError(400, "Currency with this code already exists");
-      }
-      // Create new currency
-      console.log("1");
-      const newCurrency = await Currency.create({ name, code, symbol });
-      console.log("2");
-      logger.info("Currency created", { currencyId: newCurrency.id });
-      return res
-        .status(201)
-        .json(
-          new ApiResponse(
-            201,
-            { currency: newCurrency },
-            "Currency created successfully"
-          )
-        );
-    } catch (error) {
-      logger.error("Database error creating currency", {
-        error: error.message,
-      });
-      if (
-        error.name === "SequelizeUniqueConstraintError" ||
-        error.name === "SequelizeValidationError"
-      ) {
-        throw new ApiError(400, error.message, error.errors);
-      }
-      throw new ApiError(500, "Internal Server Error", error);
+    // Check if the currency code already exists
+    const existingCurrency = await Currency.findOne({ where: { code } });
+    if (existingCurrency) {
+      logger.warn("Duplicate currency code", { code });
+      throw new ApiError(400, "Currency with this code already exists");
     }
+    // Create new currency
+    console.log("1");
+    const newCurrency = await Currency.create({ name, code, symbol });
+    console.log("2");
+    logger.info("Currency created", { currencyId: newCurrency.id });
+    return res
+      .status(201)
+      .json(
+        new ApiResponse(
+          201,
+          { currency: newCurrency },
+          "Currency created successfully"
+        )
+      );
   }),
 ];
 
@@ -168,26 +143,16 @@ const updateCurrency = [
     }
     const { id } = req.params;
     const updatedData = req.body;
-    try {
-      const currency = await Currency.findByPk(id);
-      if (!currency) {
-        logger.warn("Currency not found for update", { currencyId: id });
-        throw new ApiError(404, "Currency not found");
-      }
-      await currency.update(updatedData);
-      logger.info("Currency updated", { currencyId: id });
-      return res.json(
-        new ApiResponse(200, { currency }, "Currency updated successfully")
-      );
-    } catch (error) {
-      logger.error("Database error updating currency", {
-        error: error.message,
-      });
-      if (error.name === "SequelizeValidationError") {
-        throw new ApiError(400, error.message, error.errors);
-      }
-      throw new ApiError(500, "Internal Server Error", error);
+    const currency = await Currency.findByPk(id);
+    if (!currency) {
+      logger.warn("Currency not found for update", { currencyId: id });
+      throw new ApiError(404, "Currency not found");
     }
+    await currency.update(updatedData);
+    logger.info("Currency updated", { currencyId: id });
+    return res.json(
+      new ApiResponse(200, { currency }, "Currency updated successfully")
+    );
   }),
 ];
 
@@ -206,32 +171,18 @@ const deleteCurrency = [
       throw new ApiError(400, "Validation failed", errors.array());
     }
     const { id } = req.params;
-    try {
-      const currency = await Currency.findByPk(id);
-      console.log("1 : ", currency);
-      if (!currency) {
-        logger.warn("Currency not found for deletion", { currencyId: id });
-        // Throw 404 error
-        throw new ApiError(404, "Currency not found!!");
-      }
-      await currency.destroy();
-      logger.info("Currency deleted", { currencyId: id });
-      return res.json(
-        new ApiResponse(200, {}, "Currency deleted successfully")
-      );
-    } catch (error) {
-      logger.error("Database error deleting currency", {
-        error: error.message,
-      });
-      // If error is already an instance of ApiError, rethrow it.
-      if (error instanceof ApiError) {
-        throw error;
-      }
-      throw new ApiError(500, "Internal Server Error!!!", error);
+    const currency = await Currency.findByPk(id);
+    console.log("1 : ", currency);
+    if (!currency) {
+      logger.warn("Currency not found for deletion", { currencyId: id });
+      // Throw 404 error
+      throw new ApiError(404, "Currency not found");
     }
+    await currency.destroy();
+    logger.info("Currency deleted", { currencyId: id });
+    return res.json(new ApiResponse(200, {}, "Currency deleted successfully"));
   }),
 ];
-
 
 export {
   getCurrency,
