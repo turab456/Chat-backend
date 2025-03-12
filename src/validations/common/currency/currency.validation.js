@@ -58,10 +58,10 @@ export const updateCurrencyValidation = [
     .withMessage("Currency symbol cannot be empty"),
 ];
 
-export const deleteCurrencyValidation =  [
-    param("id")
-      .exists()
-      .withMessage("CurrencyId parameter is required")
-      .isUUID()
-      .withMessage("Invalid currency ID format"),
-  ]
+export const deleteCurrencyValidation = [
+  param("id")
+    .exists()
+    .withMessage("CurrencyId parameter is required")
+    .isUUID()
+    .withMessage("Invalid currency ID format"),
+];

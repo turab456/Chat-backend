@@ -26,7 +26,7 @@ import {
   getLanguageByIdValidation,
   getLanguagesValidation,
   updateLanguageValidation,
-} from "../../validations/common/currency/language.validation.js";
+} from "../../validations/common/language/language.validation.js";
 
 const router = Router();
 // put the validation middleware while registering the controllers
