@@ -24,7 +24,7 @@ import rateLimit from "express-rate-limit";
 
 const limiter = rateLimit({
   windowMs: 60 * 1000, // 1 minute
-  max: 5, // maximum number of requests allowed in the windowMs
+  max: 30, // maximum number of requests allowed in the windowMs
   message: "Too many requests, please try again later.",
   standardHeaders: true, // Send rate limit info in X-RateLimit-* headers
   legacyHeaders: false, // Disable the legacy X-RateLimit-* headers

@@ -13,7 +13,7 @@ const SchoolModel = sequelize.define(
     },
     //   this is the foreign key of school id
     school_owner_id_fk: {
-      type: DataTypes.INTEGER,
+      type: DataTypes.UUID,
       allowNull : false,
       references: {
         model : 'school_owner',

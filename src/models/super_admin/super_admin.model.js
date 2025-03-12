@@ -6,7 +6,7 @@ import { sequelize } from "../../db/index.js";
 const SuperAdmin = sequelize.define(
   "super_admin",
   {
-    id: {
+    super_admin_id: {
       type: DataTypes.UUID,
       primaryKey: true,
       defaultValue: DataTypes.UUIDV4,
@@ -28,28 +28,6 @@ const SuperAdmin = sequelize.define(
         notEmpty: { msg: "Email is required" },
       },
     },
-    password: {
-      type: DataTypes.STRING,
-      allowNull: false,
-      validate: {
-        notEmpty: { msg: "Password is required" },
-        len: {
-          args: [8, 100],
-          msg: "Password must be between 8 and 100 characters",
-        },
-        isStrongPassword(value) {
-          if (
-            !value.match(
-              /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/
-            )
-          ) {
-            throw new Error(
-              "Password must be at least 8 characters long, and contain at least one lowercase letter, one uppercase letter, one number, and one special character"
-            );
-          }
-        },
-      },
-    },
     phone_number: {
       type: DataTypes.STRING,
       allowNull: true,
@@ -62,7 +40,7 @@ const SuperAdmin = sequelize.define(
       },
     },
     role_id: {
-      type: DataTypes.INTEGER,
+      type: DataTypes.UUID,
       allowNull: false,
       references: {
         model: "user_role", // Must match the table name of your Role model
@@ -141,7 +119,7 @@ SuperAdmin.isPasswordCorrect = async function (password) {
 SuperAdmin.generateAccessToken = function () {
   return jwt.sign(
     {
-      id: this.id,
+      id: this.super_admin_id,
       email: this.email,
       full_name: this.full_name,
       role_id: this.role_id,
@@ -155,9 +133,15 @@ SuperAdmin.generateAccessToken = function () {
 
 // Instance method for generating refresh token
 SuperAdmin.generateRefreshToken = function () {
-  return jwt.sign({ id: this.id }, process.env.REFRESH_TOKEN_SECRET, {
+  return jwt.sign({ id: this.super_admin_id }, process.env.REFRESH_TOKEN_SECRET, {
     expiresIn: process.env.ACCESS_TOKEN_EXPIRES,
   });
+};
+
+// ✅ Method to update last login timestamp
+SuperAdmin.prototype.updateLastLogin = async function () {
+  this.last_login = new Date();
+  await this.save();
 };
 
 export default SuperAdmin;

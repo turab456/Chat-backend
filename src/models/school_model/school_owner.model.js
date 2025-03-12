@@ -5,13 +5,13 @@ const SchoolOwner = sequelize.define(
   "school_owner",
   {
     school_owner_id: {
-      type : DataTypes.INTEGER,
-      autoIncrement : true,
-      primaryKey : true,
-      allowNull : false
+      type: DataTypes.UUID,
+      primaryKey: true,
+      defaultValue: DataTypes.UUIDV4,
+      allowNull: false
     },
     school_owner_role_id: {
-      type: DataTypes.INTEGER,
+      type: DataTypes.UUID,
       allowNull: false,
       references: {
         model: "user_role",

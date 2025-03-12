@@ -5,10 +5,10 @@ const UserRole = sequelize.define(
   "user_role",
   {
     user_role_id: {
-      type: DataTypes.INTEGER,
-      allowNull: false,
+      type: DataTypes.UUID,
       primaryKey: true,
-      autoIncrement: true,
+      defaultValue: DataTypes.UUIDV4,
+      allowNull: false,
       unique: {
         args: true,
         msg: 'Role ID must be unique.',

@@ -19,7 +19,7 @@ const Teacher = sequelize.define(
         allowNull: false
     },
     teacher_post_id_fk:{
-        type: DataTypes.INTEGER,
+        type: DataTypes.UUID,
         allowNull: false,
         references:{
             model: 'user_role',

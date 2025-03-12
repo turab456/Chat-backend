@@ -3,7 +3,7 @@ import { database, username, password, host, dialect } from "../constants.js";
 
 const sequelize = new Sequelize(database, username, password, {
     host: host,
-    dialect: dialect, // Specify PostgreSQL dialect here
+    dialect: "postgres", // Specify PostgreSQL dialect here
     logging: false, // Disable logging if not needed (optional)
     dialectOptions: {
       ssl: process.env.NODE_ENV === "production" ? { rejectUnauthorized: false } : false, // Handle SSL if necessary

@@ -1,9 +1,129 @@
-import { asyncHandler } from "../utils/asyncHandler.utils.js";
-import { ApiError } from "../utils/ApiError.utils.js";
-import User from "../models/user.model.js";
-import { uploadOnCloudinary } from "../utils/Cloudinary.utils.js";
-import { ApiResponse } from "../utils/ApiResponse.utils.js";
+import { asyncHandler } from "../../utils/asyncHandler.utils.js";
+import { uploadOnCloudinary } from "../../utils/Cloudinary.utils.js";
 import jwt from "jsonwebtoken";
+import { ApiError } from "../../utils/ApiError.utils.js";
+import { ApiResponse } from "../../utils/ApiResponse.utils.js";
+import SuperAdmin from "../../models/super_admin/super_admin.model.js";
+import Users from "../../models/common_model/users.model.js";
+import { validationResult, body } from "express-validator";
+
+
+// Custom IP address validator (supports IPv4 & IPv6)
+const validateIPAddress = (ip) => {
+  const ipV4Pattern =
+    /^(25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9]?[0-9])(\.(25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9]?[0-9])){3}$/;
+  const ipV6Pattern =
+    /^(([0-9a-fA-F]{1,4}:){7,7}[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,7}:|([0-9a-fA-F]{1,4}:){1,6}:[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,5}(:[0-9a-fA-F]{1,4}){1,2}|([0-9a-fA-F]{1,4}:){1,4}(:[0-9a-fA-F]{1,4}){1,3}|([0-9a-fA-F]{1,4}:){1,3}(:[0-9a-fA-F]{1,4}){1,4}|([0-9a-fA-F]{1,4}:){1,2}(:[0-9a-fA-F]{1,4}){1,5}|[0-9a-fA-F]{1,4}:((:[0-9a-fA-F]{1,4}){1,6})|:((:[0-9a-fA-F]{1,4}){1,7}|:)|fe80:(:[0-9a-fA-F]{0,4}){0,4}%[0-9a-zA-Z]{1,}|::(ffff(:0{1,4}){0,1}:){0,1}((25[0-5]|(2[0-4]|1{0,1}[0-9])?[0-9])\.){3,3}(25[0-5]|(2[0-4]|1{0,1}[0-9])?[0-9])|([0-9a-fA-F]{1,4}:){1,4}:((25[0-5]|(2[0-4]|1{0,1}[0-9])?[0-9])\.){3,3}(25[0-5]|(2[0-4]|1{0,1}[0-9])?[0-9]))$/;
+  return ipV4Pattern.test(ip) || ipV6Pattern.test(ip);
+};
+
+const registerSuperAdmin = asyncHandler(async (req, res) => {
+  // first_name
+  // middle_name
+  // last_name
+  // email
+  // phone_number
+  // user_role : super_admin
+  // status : active
+  // profile
+  // login_time_stamp
+  // is_active : true
+  // password
+  // select_language
+  // select_currency
+  // ip_address
+
+  // Destructure required fields from request body 
+
+  await Promise.all([
+    body("full_name").isString().notEmpty().withMessage("Full name is required and must be a string").run(req),
+    body("email").isEmail().withMessage("Invalid email format").run(req),
+    body("phone_number").optional().isMobilePhone().withMessage("Invalid phone number format").run(req),
+    body("password")
+      .isLength({ min: 8 })
+      .matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/)
+      .withMessage(
+        "Password must be at least 8 characters long and contain at least one uppercase letter, one lowercase letter, one number, and one special character"
+      )
+      .run(req),
+  ]);
+
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    throw new ApiError(400 , errors.array())
+    // return res.status(400).json({ errors: errors.array() });
+  }
+
+  const { full_name, email, phone_number, password } = req.body;
+
+  // Base field checks
+  if (
+    !full_name ||
+    !email ||
+    !password ||
+    !select_language ||
+    !select_currency ||
+    !ip_address
+  ) {
+    return res.status(400).json({ message: "Missing required fields." });
+  }
+
+  // Validate IP address
+  if (!validateIPAddress(ip_address)) {
+    return res.status(400).json({ message: "Invalid IP address format." });
+  }
+
+  // Check for duplicate email
+  const existingAdmin = await SuperAdmin.findOne({ where: { email } });
+  if (existingAdmin) {
+    return res.status(400).json({ message: "Email address already in use." });
+  }
+
+  // Force the following fields for a super admin
+  const userData = {
+    full_name,
+    email,
+    phone_number,
+    // Enforce role and status values
+    user_role: "super_admin",
+    status: "active",
+    profile_picture,
+    login_time_stamp: login_time_stamp
+      ? new Date(login_time_stamp)
+      : new Date(),
+    is_active: true,
+    password,
+    select_language,
+    select_currency,
+    ip_address,
+  };
+
+  // Create new SuperAdmin record (the model hooks handle password hashing)
+  const newSuperAdmin = await SuperAdmin.create(userData);
+
+  // Generate JWT tokens via instance methods
+  const accessToken = newSuperAdmin.generateAccessToken();
+  const refreshToken = newSuperAdmin.generateRefreshToken();
+  let data = {
+    id: newSuperAdmin.super_admin_id,
+    full_name: newSuperAdmin.full_name,
+    email: newSuperAdmin.email,
+    phone_number: newSuperAdmin.phone_number,
+    user_role: newSuperAdmin.user_role,
+    status: newSuperAdmin.status,
+    profile_picture: newSuperAdmin.profile_picture,
+    login_time_stamp: newSuperAdmin.login_time_stamp,
+    is_active: newSuperAdmin.is_active,
+    select_language: newSuperAdmin.select_language,
+    select_currency: newSuperAdmin.select_currency,
+    ip_address: newSuperAdmin.ip_address,
+    accessToken,
+    refreshToken,
+  };
+  res
+    .status(201)
+    .json(new ApiResponse(200, { data }, "User created successfully"));
+});
 
 const generateAccessTokenAndRefreshToken = async (userId) => {
   try {
@@ -54,38 +174,6 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
   } catch (err) {
     throw new ApiError(401, err.message || "Invalid refresh token");
   }
-});
-
-const registerUser = asyncHandler(async (req, res) => {
-  const { fullname, email, username, password, role_id } = req.body;
-  if (!fullname || !email || !username || !password) {
-    throw new ApiError(400, "All fields are required");
-  }
-
-  const existingUser = await User.findOne({ where: { email } });
-  if (existingUser) {
-    throw new ApiError(409, "User with email already exists");
-  }
-
-  // const avatarLocalPath = req?.files?.avatar?.[0]?.path;
-  // if (!avatarLocalPath) throw new ApiError(400, "Avatar is required");
-
-  // const avatar = await uploadOnCloudinary(avatarLocalPath);
-  // const coverImage = req?.files?.coverImage?.[0]?.path ? await uploadOnCloudinary(req.files.coverImage[0].path) : null;
-
-  const user = await User.create({
-    fullname,
-    email,
-    username: username.toLowerCase(),
-    password,
-    role_id,
-    // avatar: avatar.url,
-    // coverImage: coverImage?.url || "",
-  });
-
-  res
-    .status(201)
-    .json(new ApiResponse(200, { user }, "User created successfully"));
 });
 
 const loginUser = asyncHandler(async (req, res) => {
@@ -197,11 +285,11 @@ const updateUserAvatar = asyncHandler(async (req, res) => {
 });
 
 export {
-  registerUser,
   loginUser,
   logoutUser,
   refreshAccessToken,
   ChangeCurrentPassword,
   updateAccountDetails,
   updateUserAvatar,
+  registerSuperAdmin
 };

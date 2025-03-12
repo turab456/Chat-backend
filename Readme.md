@@ -125,3 +125,19 @@ tests/
 
 
 `` command to run the test cases example : npm test tests/super_admin/superAdmin.test.js
+
+``while deploying the code on server set the updateCurrency on cronjob for 24 hours to update the currency value in the database 
+
+or set the interval in nodejs 
+
+setInterval(updateCurrencies, 24 * 60 * 60 * 1000); // Runs every 24 hours
+updateCurrencies(); // Runs immediately on startup
+
+
+Use a Cron Job (Linux/macOS)
+Run:
+crontab -e
+
+
+Add this line to execute the script every 6 hours:
+0 */6 * * * node /path-to-your-project/scripts/updateCurrencies.js

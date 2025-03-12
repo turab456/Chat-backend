@@ -1,38 +1,36 @@
 import winston from 'winston';
-import 'winston-daily-rotate-file'; // For log rotation
+import 'winston-daily-rotate-file';
 
 const { LOG_LEVEL, LOG_FILE, LOG_CONSOLE, NODE_ENV } = process.env;
 
-// Set default log level to 'info' in production, 'debug' in development
+// Set default log level: 'info' in production, 'debug' otherwise
 const logLevel = LOG_LEVEL || (NODE_ENV === 'production' ? 'info' : 'debug');
-
-// Define log file location (defaults to 'logs/app.log')
+// Default log file path
 const logFile = LOG_FILE || 'logs/app.log';
-
-// Only log to the console if LOG_CONSOLE is explicitly 'true' or if not in production
+// Log to console if LOG_CONSOLE is 'true' or if not in production
 const logToConsole = LOG_CONSOLE === 'true' || NODE_ENV !== 'production';
 
-// Winston Transport Configuration
+// Configure Winston transports
 const transports = [];
 
-// File Transport (with daily rotation in production)
+// In production, use DailyRotateFile for log rotation
 if (NODE_ENV === 'production') {
   transports.push(
     new winston.transports.DailyRotateFile({
-      filename: logFile, // Log file path
-      datePattern: 'YYYY-MM-DD', // Daily log rotation pattern
-      zippedArchive: true, // Compress old logs to save space
-      maxSize: '20m', // Max file size before rotating (e.g., 20MB)
-      maxFiles: '14d', // Retain logs for the last 14 days
-      level: logLevel, // Log level for file transport
+      filename: logFile,              // Log file path
+      datePattern: 'YYYY-MM-DD',       // Daily rotation pattern
+      zippedArchive: true,             // Compress archived logs
+      maxSize: '20m',                  // Maximum file size before rotation
+      maxFiles: '14d',                 // Keep logs for 14 days
+      level: logLevel,
       format: winston.format.combine(
-        winston.format.timestamp(), // Timestamp for each log
-        winston.format.json() // Structured logs in JSON format for easy parsing
+        winston.format.timestamp(),
+        winston.format.json()
       )
     })
   );
 } else {
-  // In non-production environments, use a simple file log (e.g., for development or staging)
+  // In non-production, use a simple file transport
   transports.push(
     new winston.transports.File({
       filename: logFile,
@@ -40,53 +38,51 @@ if (NODE_ENV === 'production') {
       format: winston.format.combine(
         winston.format.timestamp(),
         winston.format.printf(({ timestamp, level, message, stack }) => {
-          if (stack) {
-            return `[${timestamp}] ${level.toUpperCase()}: ${message}\n${stack}`;
-          }
-          return `[${timestamp}] ${level.toUpperCase()}: ${message}`;
+          return stack
+            ? `[${timestamp}] ${level.toUpperCase()}: ${message}\n${stack}`
+            : `[${timestamp}] ${level.toUpperCase()}: ${message}`;
         })
       )
     })
   );
 }
 
-// Console Transport (only in development or if explicitly enabled)
+// Add console logging if enabled
 if (logToConsole) {
   transports.push(
     new winston.transports.Console({
       format: winston.format.combine(
-        winston.format.colorize(), // Add color to console logs
-        winston.format.simple() // Simple log format
+        winston.format.colorize(),
+        winston.format.simple()
       )
     })
   );
 }
 
-// Create the Winston Logger Instance
+// Create the Winston logger instance
 const logger = winston.createLogger({
-  level: logLevel, // Set global log level
+  level: logLevel,
   format: winston.format.combine(
     winston.format.timestamp(),
     winston.format.printf(({ timestamp, level, message, stack }) => {
-      if (stack) {
-        return `[${timestamp}] ${level.toUpperCase()}: ${message}\n${stack}`;
-      }
-      return `[${timestamp}] ${level.toUpperCase()}: ${message}`;
+      return stack
+        ? `[${timestamp}] ${level.toUpperCase()}: ${message}\n${stack}`
+        : `[${timestamp}] ${level.toUpperCase()}: ${message}`;
     })
   ),
   transports,
 });
 
-// Handle uncaught exceptions (log to console and file)
+// Handle uncaught exceptions: log to both console and file
 logger.exceptions.handle(
   new winston.transports.Console({
     format: winston.format.combine(
       winston.format.colorize(),
       winston.format.simple()
-    ),
+    )
   }),
   new winston.transports.File({
-    filename: logFile, // Log uncaught exceptions to the same file
+    filename: logFile,
     level: logLevel,
     format: winston.format.combine(
       winston.format.timestamp(),
@@ -95,13 +91,165 @@ logger.exceptions.handle(
   })
 );
 
-// Handle unhandled promise rejections
+// Handle unhandled promise rejections by logging the reason and promise details
 process.on('unhandledRejection', (reason, promise) => {
-  logger.error('Unhandled Rejection at:', promise, 'reason:', reason);
-  // Optionally, process the rejection reason (e.g., exit the process or notify the team)
+  logger.error('Unhandled Rejection', { promise, reason });
+  // Optional: process.exit(1); // Exit process if needed
 });
 
 export default logger;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// import winston from 'winston';
+// import 'winston-daily-rotate-file'; // For log rotation
+
+// const { LOG_LEVEL, LOG_FILE, LOG_CONSOLE, NODE_ENV } = process.env;
+
+// // Set default log level to 'info' in production, 'debug' in development
+// const logLevel = LOG_LEVEL || (NODE_ENV === 'production' ? 'info' : 'debug');
+
+// // Define log file location (defaults to 'logs/app.log')
+// const logFile = LOG_FILE || 'logs/app.log';
+
+// // Only log to the console if LOG_CONSOLE is explicitly 'true' or if not in production
+// const logToConsole = LOG_CONSOLE === 'true' || NODE_ENV !== 'production';
+
+// // Winston Transport Configuration
+// const transports = [];
+
+// // File Transport (with daily rotation in production)
+// if (NODE_ENV === 'production') {
+//   transports.push(
+//     new winston.transports.DailyRotateFile({
+//       filename: logFile, // Log file path
+//       datePattern: 'YYYY-MM-DD', // Daily log rotation pattern
+//       zippedArchive: true, // Compress old logs to save space
+//       maxSize: '20m', // Max file size before rotating (e.g., 20MB)
+//       maxFiles: '14d', // Retain logs for the last 14 days
+//       level: logLevel, // Log level for file transport
+//       format: winston.format.combine(
+//         winston.format.timestamp(), // Timestamp for each log
+//         winston.format.json() // Structured logs in JSON format for easy parsing
+//       )
+//     })
+//   );
+// } else {
+//   // In non-production environments, use a simple file log (e.g., for development or staging)
+//   transports.push(
+//     new winston.transports.File({
+//       filename: logFile,
+//       level: logLevel,
+//       format: winston.format.combine(
+//         winston.format.timestamp(),
+//         winston.format.printf(({ timestamp, level, message, stack }) => {
+//           if (stack) {
+//             return `[${timestamp}] ${level.toUpperCase()}: ${message}\n${stack}`;
+//           }
+//           return `[${timestamp}] ${level.toUpperCase()}: ${message}`;
+//         })
+//       )
+//     })
+//   );
+// }
+
+// // Console Transport (only in development or if explicitly enabled)
+// if (logToConsole) {
+//   transports.push(
+//     new winston.transports.Console({
+//       format: winston.format.combine(
+//         winston.format.colorize(), // Add color to console logs
+//         winston.format.simple() // Simple log format
+//       )
+//     })
+//   );
+// }
+
+// // Create the Winston Logger Instance
+// const logger = winston.createLogger({
+//   level: logLevel, // Set global log level
+//   format: winston.format.combine(
+//     winston.format.timestamp(),
+//     winston.format.printf(({ timestamp, level, message, stack }) => {
+//       if (stack) {
+//         return `[${timestamp}] ${level.toUpperCase()}: ${message}\n${stack}`;
+//       }
+//       return `[${timestamp}] ${level.toUpperCase()}: ${message}`;
+//     })
+//   ),
+//   transports,
+// });
+
+// // Handle uncaught exceptions (log to console and file)
+// logger.exceptions.handle(
+//   new winston.transports.Console({
+//     format: winston.format.combine(
+//       winston.format.colorize(),
+//       winston.format.simple()
+//     ),
+//   }),
+//   new winston.transports.File({
+//     filename: logFile, // Log uncaught exceptions to the same file
+//     level: logLevel,
+//     format: winston.format.combine(
+//       winston.format.timestamp(),
+//       winston.format.json()
+//     )
+//   })
+// );
+
+// // Handle unhandled promise rejections
+// process.on('unhandledRejection', (reason, promise) => {
+//   logger.error('Unhandled Rejection at:', promise, 'reason:', reason);
+//   // Optionally, process the rejection reason (e.g., exit the process or notify the team)
+// });
+
+// export default logger;
 
 
 
