@@ -54,3 +54,16 @@ export const sendOtp = async (toMobile) => {
   }
   
 };
+
+
+const run = async () => {
+  try {
+    const toMobile = '+919899211238'; // Replace with a valid phone number
+    const result = await sendOtp(toMobile);
+    console.log(`✅ OTP Sent Successfully: ${result.otp}`);
+  } catch (error) {
+    console.error(`❌ Error: ${error.message}`);
+  }
+};
+
+run()

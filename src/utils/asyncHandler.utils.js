@@ -1,5 +1,6 @@
 import logger from "./logger.utils.js";
 import { ApiError } from "./ApiError.utils.js";
+import { validationResult } from "express-validator";
 
 const asyncHandler = (requestHandler) => {
   return (req, res, next) => {

@@ -5,8 +5,6 @@ import requestLogger from "./middlewares/requestLogger.middleware.js";
 import helmetMiddleware from "./middlewares/helmet.Middleware.js";
 import errorLogger from "./middlewares/errorLogger.middleware.js";
 import limiter from "./middlewares/rateLimiter.middleware.js";
-import { sendEmail } from "./utils/emailService.utils.js";
-import { sendOtp } from "./utils/mobileotpservice.utils.js";
 
 const app = express();
 
@@ -34,17 +32,6 @@ app.post("/report-violation", express.json(), (req, res) => {
 // Use the custom Helmet middleware globally
 app.use(helmetMiddleware);
 
-const run = async () => {
-  try {
-    const toMobile = '+919899211238'; // Replace with a valid phone number
-    const result = await sendOtp(toMobile);
-    console.log(`✅ OTP Sent Successfully: ${result.otp}`);
-  } catch (error) {
-    console.error(`❌ Error: ${error.message}`);
-  }
-};
-
-run()
 import adminRouter from "./routes/admin/admin.routes.js";
 import commonRouter from "./routes/common/common.routes.js";
 import { ADMIN_BASE_URL, COMMON_BASE_URL } from "./constants.js";
