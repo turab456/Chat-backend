@@ -14,3 +14,4 @@ export const host = String(process.env.HOST) || "localhost";
 export const dialect = String(process.env.DILECT) || "postgres";
 export const ADMIN_BASE_URL = "/api/v1/admin";
 export const COMMON_BASE_URL = "/api/v1/common"
+export const SUPER_ADMIN_URL = '/api/v1/superadmin'

@@ -1,8 +1,8 @@
 import dotenv from "dotenv";
-import { connectSequelize } from "./db/index.js";
+import { connectSequelize } from "./src/db/index.js";
 import  app  from "./app.js";
-import { PORT } from "./constants.js";
-import syncDatabase from "./utils/dbSync.js";
+import { PORT } from "./src/constants.js";
+import syncDatabase from "./src/utils/dbSync.js";
 
 dotenv.config({
   path: "./.env",

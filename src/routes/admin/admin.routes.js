@@ -9,7 +9,7 @@ const seedPlanTypes = async () => {
 
     for (const plan of plans) {
       await UserRole.findOrCreate({
-        where: { user_type: plan },
+        where: { name: plan },
       });
     }
 

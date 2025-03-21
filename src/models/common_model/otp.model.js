@@ -3,7 +3,7 @@ import bcrypt from 'bcrypt';
 import { sequelize } from '../../db/index.js';
 
 const OTP = sequelize.define(
-  'OTP',
+  'otp_codes',
   {
     id: {
       type: DataTypes.UUID,
@@ -14,7 +14,7 @@ const OTP = sequelize.define(
     // Link to the user that requested the OTP
     userId: {
       type: DataTypes.UUID,
-      allowNull: false,
+      allowNull: true,
       references: {
         model: 'users', // ensure this matches your users table name
         key: 'id',
@@ -22,17 +22,29 @@ const OTP = sequelize.define(
       onUpdate: 'CASCADE',
       onDelete: 'CASCADE',
       validate: {
-        notNull: { msg: 'User ID is required' },
         isUUID: { args: 4, msg: 'Invalid User ID format' },
       },
     },
+    verify_email_id : {
+      type : DataTypes.UUID,
+      allowNull : true,
+      references : {
+        model : "verify_email",
+        key : "id"
+      },
+      onDelete : "CASCADE",
+      onUpdate : "CASCADE",
+      validate : {
+        isUUID : { args : 4 , msg : "Invalid verify email ID format" }
+      }
+    },
     // Link to the role of the user (teacher, student, super admin, staff, etc.)
     roleId: {
-      type: DataTypes.INTEGER,
+      type: DataTypes.UUID,
       allowNull: false,
       references: {
-        model: 'roles', // ensure this matches your roles table name
-        key: 'id',
+        model: 'user_role', // ensure this matches your roles table name
+        key: 'user_role_id',
       },
       onUpdate: 'CASCADE',
       onDelete: 'CASCADE',
@@ -174,16 +186,6 @@ OTP.verifyOTP = async function (inputOtp) {
     throw new Error('OTP value is required for verification');
   }
   return await bcrypt.compare(inputOtp, this.hashedOtp);
-};
-
-// ------------------------
-// Define Associations for OTP Model
-// ------------------------
-OTP.associate = (models) => {
-  // OTP belongs to a User.
-  OTP.belongsTo(models.User, { foreignKey: 'userId', as: 'user' });
-  // OTP belongs to a Role.
-  OTP.belongsTo(models.Role, { foreignKey: 'roleId', as: 'role' });
 };
 
 export default OTP;

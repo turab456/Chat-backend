@@ -3,293 +3,291 @@ import { uploadOnCloudinary } from "../../utils/Cloudinary.utils.js";
 import jwt from "jsonwebtoken";
 import { ApiError } from "../../utils/ApiError.utils.js";
 import { ApiResponse } from "../../utils/ApiResponse.utils.js";
-import SuperAdmin from "../../models/super_admin/super_admin.model.js";
-import Users from "../../models/common_model/users.model.js";
-import { validationResult, body } from "express-validator";
+import { v4 as uuidv4, validate as isUUID } from "uuid";
+import { hashedOtp, otpExpiresAt, rawOtp } from "../../utils/otp.utils.js";
+import VerifyEmail from "../../models/common_model/verifyEmail.model.js";
+import { UAParser } from "ua-parser-js";
+import OTP from "../../models/common_model/otp.model.js";
 
+const verifySuperAdminEmail = asyncHandler(async (req, res) => {
+  const { email } = req.body;
+  const roleId = "7e207f29-a73b-4546-8ff8-30aea536b6b2";
 
-// Custom IP address validator (supports IPv4 & IPv6)
-const validateIPAddress = (ip) => {
-  const ipV4Pattern =
-    /^(25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9]?[0-9])(\.(25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9]?[0-9])){3}$/;
-  const ipV6Pattern =
-    /^(([0-9a-fA-F]{1,4}:){7,7}[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,7}:|([0-9a-fA-F]{1,4}:){1,6}:[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,5}(:[0-9a-fA-F]{1,4}){1,2}|([0-9a-fA-F]{1,4}:){1,4}(:[0-9a-fA-F]{1,4}){1,3}|([0-9a-fA-F]{1,4}:){1,3}(:[0-9a-fA-F]{1,4}){1,4}|([0-9a-fA-F]{1,4}:){1,2}(:[0-9a-fA-F]{1,4}){1,5}|[0-9a-fA-F]{1,4}:((:[0-9a-fA-F]{1,4}){1,6})|:((:[0-9a-fA-F]{1,4}){1,7}|:)|fe80:(:[0-9a-fA-F]{0,4}){0,4}%[0-9a-zA-Z]{1,}|::(ffff(:0{1,4}){0,1}:){0,1}((25[0-5]|(2[0-4]|1{0,1}[0-9])?[0-9])\.){3,3}(25[0-5]|(2[0-4]|1{0,1}[0-9])?[0-9])|([0-9a-fA-F]{1,4}:){1,4}:((25[0-5]|(2[0-4]|1{0,1}[0-9])?[0-9])\.){3,3}(25[0-5]|(2[0-4]|1{0,1}[0-9])?[0-9]))$/;
-  return ipV4Pattern.test(ip) || ipV6Pattern.test(ip);
-};
-
-const registerSuperAdmin = asyncHandler(async (req, res) => {
-  // first_name
-  // middle_name
-  // last_name
-  // email
-  // phone_number
-  // user_role : super_admin
-  // status : active
-  // profile
-  // login_time_stamp
-  // is_active : true
-  // password
-  // select_language
-  // select_currency
-  // ip_address
-
-  // Destructure required fields from request body 
-
-  await Promise.all([
-    body("full_name").isString().notEmpty().withMessage("Full name is required and must be a string").run(req),
-    body("email").isEmail().withMessage("Invalid email format").run(req),
-    body("phone_number").optional().isMobilePhone().withMessage("Invalid phone number format").run(req),
-    body("password")
-      .isLength({ min: 8 })
-      .matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/)
-      .withMessage(
-        "Password must be at least 8 characters long and contain at least one uppercase letter, one lowercase letter, one number, and one special character"
-      )
-      .run(req),
-  ]);
-
-  const errors = validationResult(req);
-  if (!errors.isEmpty()) {
-    throw new ApiError(400 , errors.array())
-    // return res.status(400).json({ errors: errors.array() });
+  // Validate roleId as a valid UUID
+  if (!roleId || !isUUID(roleId)) {
+    throw new ApiError(400, "Invalid role ID format");
   }
 
-  const { full_name, email, phone_number, password } = req.body;
+  // Extract device details using ua-parser-js
+  const parser = new UAParser(req.headers["user-agent"]);
+  const deviceInfo = parser.getResult();
 
-  // Base field checks
-  if (
-    !full_name ||
-    !email ||
-    !password ||
-    !select_language ||
-    !select_currency ||
-    !ip_address
-  ) {
-    return res.status(400).json({ message: "Missing required fields." });
-  }
+  // Look for an existing verify email record
+  let verifyEmailRecord = await VerifyEmail.findOne({ where: { email } });
 
-  // Validate IP address
-  if (!validateIPAddress(ip_address)) {
-    return res.status(400).json({ message: "Invalid IP address format." });
-  }
-
-  // Check for duplicate email
-  const existingAdmin = await SuperAdmin.findOne({ where: { email } });
-  if (existingAdmin) {
-    return res.status(400).json({ message: "Email address already in use." });
-  }
-
-  // Force the following fields for a super admin
-  const userData = {
-    full_name,
-    email,
-    phone_number,
-    // Enforce role and status values
-    user_role: "super_admin",
-    status: "active",
-    profile_picture,
-    login_time_stamp: login_time_stamp
-      ? new Date(login_time_stamp)
-      : new Date(),
-    is_active: true,
-    password,
-    select_language,
-    select_currency,
-    ip_address,
-  };
-
-  // Create new SuperAdmin record (the model hooks handle password hashing)
-  const newSuperAdmin = await SuperAdmin.create(userData);
-
-  // Generate JWT tokens via instance methods
-  const accessToken = newSuperAdmin.generateAccessToken();
-  const refreshToken = newSuperAdmin.generateRefreshToken();
-  let data = {
-    id: newSuperAdmin.super_admin_id,
-    full_name: newSuperAdmin.full_name,
-    email: newSuperAdmin.email,
-    phone_number: newSuperAdmin.phone_number,
-    user_role: newSuperAdmin.user_role,
-    status: newSuperAdmin.status,
-    profile_picture: newSuperAdmin.profile_picture,
-    login_time_stamp: newSuperAdmin.login_time_stamp,
-    is_active: newSuperAdmin.is_active,
-    select_language: newSuperAdmin.select_language,
-    select_currency: newSuperAdmin.select_currency,
-    ip_address: newSuperAdmin.ip_address,
-    accessToken,
-    refreshToken,
-  };
-  res
-    .status(201)
-    .json(new ApiResponse(200, { data }, "User created successfully"));
-});
-
-const generateAccessTokenAndRefreshToken = async (userId) => {
-  try {
-    const user = await User.findByPk(userId);
-    if (!user) throw new ApiError(404, "User not found");
-
-    const accessToken = user.generateAccessToken();
-    const refreshToken = user.generateRefreshToken();
-
-    user.refresh_token = refreshToken;
-    await user.save();
-
-    return { refreshToken, accessToken };
-  } catch (err) {
-    throw new ApiError(500, "Error generating tokens");
-  }
-};
-
-const refreshAccessToken = asyncHandler(async (req, res) => {
-  const incomingRefreshToken =
-    req.cookies.refreshToken || req.body.refreshToken;
-  if (!incomingRefreshToken) {
-    throw new ApiError(401, "Unauthorized request");
-  }
-
-  try {
-    const decodedToken = jwt.verify(
-      incomingRefreshToken,
-      process.env.REFRESH_TOKEN_SECRET
-    );
-    const user = await User.findByPk(decodedToken.user_id);
-    if (!user || incomingRefreshToken !== user.refresh_token) {
-      throw new ApiError(401, "Invalid or expired refresh token");
+  if (verifyEmailRecord) {
+    // If the email is already verified, we don't need to send a new OTP
+    if (verifyEmailRecord.isEmailVerified) {
+      throw new ApiError(400, "Email is already verified");
     }
 
-    const { accessToken, refreshToken: newRefreshToken } =
-      await generateAccessTokenAndRefreshToken(user.user_id);
-    res
-      .cookie("accessToken", accessToken, { httpOnly: true, secure: true })
-      .cookie("refreshToken", newRefreshToken, { httpOnly: true, secure: true })
-      .json(
-        new ApiResponse(
-          200,
-          { accessToken, refreshToken: newRefreshToken },
-          "Access token refreshed"
-        )
-      );
-  } catch (err) {
-    throw new ApiError(401, err.message || "Invalid refresh token");
-  }
-});
+    // Email exists but is not verified; check for an existing OTP record (latest one)
+    const existingOTP = await OTP.findOne({
+      where: { verify_email_id: verifyEmailRecord.id },
+      order: [["createdAt", "DESC"]],
+    });
 
-const loginUser = asyncHandler(async (req, res) => {
-  const { email, username, password } = req.body;
-  if (!username && !email) {
-    throw new ApiError(400, "Username or email is required");
+    if (existingOTP) {
+      if (new Date(existingOTP.expiresAt) > new Date()) {
+        // OTP is still valid – instruct the client to use it
+        throw new ApiError(
+          409,
+          "An OTP has already been sent and is still valid. Please check your email or wait until it expires to request a new one or request a new OTP"
+        );
+      } else {
+        // OTP is expired – soft delete it
+        await existingOTP.destroy();
+        throw new ApiError(409, "OTP is not valid generate the new otp");
+      }
+    }
+  } else {
+    // Create a new VerifyEmail record if it doesn't exist
+    verifyEmailRecord = await VerifyEmail.create({
+      email,
+      role_id: roleId,
+    });
   }
 
-  const user = await User.findOne({
-    where: { [Op.or]: [{ username }, { email }] },
+  // Generate a new OTP record
+  const generatedRawOtp = rawOtp; // Ideally, generate a random OTP dynamically
+  const newOTP = await OTP.create({
+    verify_email_id: verifyEmailRecord.id,
+    roleId: roleId, // Ensure OTP model accepts UUID for roleId (remove isInt validation)
+    rawOtp: generatedRawOtp, // The hook on OTP model will hash this value
+    purpose: "SIGNUP",
+    expiresAt: otpExpiresAt(), // Set expiry 10 minutes from now
+    maxAttempts: 5,
+    ipAddress: req.ip,
+    deviceInfo: JSON.stringify(deviceInfo),
   });
-  if (!user || !(await user.isPasswordCorrect(password))) {
-    throw new ApiError(401, "Invalid credentials");
-  }
 
-  const { accessToken, refreshToken } =
-    await generateAccessTokenAndRefreshToken(user.user_id);
-  res
-    .cookie("accessToken", accessToken, { httpOnly: true, secure: true })
-    .cookie("refreshToken", refreshToken, { httpOnly: true, secure: true })
-    .json(
-      new ApiResponse(
-        200,
-        { user, accessToken, refreshToken },
-        "User logged in successfully"
-      )
-    );
-});
+  // Optionally update the VerifyEmail record with the new OTP ID
+  verifyEmailRecord.otp_id = newOTP.id;
+  await verifyEmailRecord.save();
 
-const logoutUser = asyncHandler(async (req, res) => {
-  await User.update(
-    { refresh_token: null },
-    { where: { user_id: req.user.user_id } }
+  console.log("Email Created/Updated:", verifyEmailRecord);
+  console.log("New OTP Record:", newOTP);
+
+  return res.json(
+    new ApiResponse(200, {
+      message: "OTP sent to verify email",
+      otpId: newOTP.id,
+    })
   );
-  res
-    .clearCookie("accessToken")
-    .clearCookie("refreshToken")
-    .json(new ApiResponse(200, {}, "User logged out"));
 });
 
-const ChangeCurrentPassword = asyncHandler(async (req, res) => {
-  const { oldPassword, newPassword } = req.body;
-  console.log("oldPassword : ", oldPassword);
-  console.log("newPassword : ", newPassword);
-  // this will fetch the user from the verifyJWT if user is there we will get the id
-  const user = await User.findById(req.user?._id);
-  console.log("this is the id of the user  : ", req.user?._id);
-  const isPassowrdCorrect = await user.isPasswordCorrect(oldPassword);
+const generateNewOtpForEmailVerification = asyncHandler(async (req, res) => {
+  const { email } = req.body;
+  const roleId = "7e207f29-a73b-4546-8ff8-30aea536b6b2"; // Fixed role for super admin; ensure this is a valid UUID
 
-  if (!isPassowrdCorrect) {
-    throw new ApiError(400, "Invalid old password");
+  // Validate roleId format
+  if (!roleId || !isUUID(roleId)) {
+    throw new ApiError(400, "Invalid role ID format");
   }
 
-  user.password = newPassword;
-  await user.save({ validateBeforeSave: false });
-  return res
-    .status(200)
-    .json(new ApiResponse(200, {}, "password changed succesfully"));
+  // Find the VerifyEmail record
+  const verifyEmailRecord = await VerifyEmail.findOne({ where: { email } });
+  if (!verifyEmailRecord) {
+    throw new ApiError(404, "Verify email record not found");
+  }
+
+  // If the email is already verified, no new OTP is needed.
+  if (verifyEmailRecord.isEmailVerified) {
+    throw new ApiError(400, "Email is already verified");
+  }
+
+  // Soft-delete any existing OTP record for this email
+  const existingOtp = await OTP.findOne({
+    where: { verify_email_id: verifyEmailRecord.id },
+    order: [["createdAt", "DESC"]],
+  });
+  if (existingOtp) {
+    await existingOtp.destroy(); // soft delete due to paranoid:true in the OTP model
+  }
+
+  // Extract device info using ua-parser-js
+  const parser = new UAParser(req.headers["user-agent"]);
+  const deviceInfo = parser.getResult();
+
+  // Generate a new OTP record
+  const generatedRawOtp = rawOtp; // ideally, rawOtp returns a randomly generated OTP code
+  const newOtpRecord = await OTP.create({
+    verify_email_id: verifyEmailRecord.id,
+    roleId: roleId, // Ensure the OTP model accepts UUID for roleId
+    rawOtp: generatedRawOtp, // Will be hashed in the OTP model hook
+    purpose: "SIGNUP",
+    expiresAt: otpExpiresAt(), // 10 minutes from now
+    maxAttempts: 5,
+    ipAddress: req.ip,
+    deviceInfo: JSON.stringify(deviceInfo),
+  });
+
+  // Update the VerifyEmail record with the new OTP id (optional, if you want to track it)
+  verifyEmailRecord.otp_id = newOtpRecord.id;
+  await verifyEmailRecord.save();
+
+  return res.json(
+    new ApiResponse(200, {
+      message: "New OTP generated and sent to verify the email",
+      otpId: newOtpRecord.id,
+    })
+  );
 });
 
-const updateAccountDetails = asyncHandler(async (req, res) => {
-  const { username, email } = req.body;
-  if (!fullname || !email) {
-    throw new ApiError(400, "All fields are required");
+const verifyEmailViaOtp = asyncHandler(async (req, res) => {
+  const { email, otp } = req.body;
+
+  if (!email || !otp) {
+    throw new ApiError(400, "Email and OTP are required");
   }
 
-  const user = User.findByIdAndUpdate(
-    req?.user?._id,
-    {
-      $set: {
-        username,
-        email: email,
-      },
+  // Retrieve the VerifyEmail record
+  const verifyEmailRecord = await VerifyEmail.findOne({ where: { email } });
+  if (!verifyEmailRecord) {
+    throw new ApiError(404, "No verification record found for this email");
+  }
+
+  // Retrieve the latest OTP record that is still valid (not expired)
+  const otpRecord = await OTP.findOne({
+    where: {
+      verify_email_id: verifyEmailRecord.id,
+      expiresAt: { [Op.gt]: new Date() },
     },
-    { new: true }
-  ).select("-password");
+    order: [["createdAt", "DESC"]],
+  });
 
-  return res
-    .status(200)
-    .json(new ApiResponse(200, user, "Accounts Details updated succesfully"));
-});
-
-const updateUserAvatar = asyncHandler(async (req, res) => {
-  const avatarLocalPath = req.file?.path;
-
-  if (!avatarLocalPath) {
-    throw new ApiError(400, "Avatar file is missing");
+  if (!otpRecord) {
+    throw new ApiError(
+      400,
+      "OTP has expired or does not exist. Please request a new OTP."
+    );
   }
 
-  const avatar = await uploadOnCloudinary(avatarLocalPath);
-
-  if (!avatar.url) {
-    throw new ApiError(400, "Error while uploading the avatar on cloudinary");
+  // Check if maximum attempts have been reached
+  if (otpRecord.attempts >= otpRecord.maxAttempts) {
+    throw new ApiError(
+      400,
+      "Maximum OTP attempts exceeded. Please request a new OTP."
+    );
   }
 
-  const user = await User.findByIdAndUpdate(
-    req.res?._id,
-    {
-      $set: {
-        avatar: avatar.url,
-      },
-    },
-    { new: true }
-  ).select("-password");
+  // Verify the OTP using the instance method on the OTP model
+  const isOtpValid = await otpRecord.verifyOTP(otp);
+  if (!isOtpValid) {
+    // Increment the attempts and save the record
+    otpRecord.attempts += 1;
+    await otpRecord.save();
+    throw new ApiError(400, "Incorrect OTP. Please try again.");
+  }
 
-  return res
-    .status(200)
-    .json(ApiResponse(200, user, "avatar image updated succesfully"));
+  // OTP is correct: mark the email as verified
+  verifyEmailRecord.isEmailVerified = true;
+  await verifyEmailRecord.save();
+
+  // Soft-delete the OTP record after successful verification
+  await otpRecord.destroy();
+
+  return res.json(
+    new ApiResponse(200, { message: "Email successfully verified" })
+  );
 });
 
 export {
-  loginUser,
-  logoutUser,
-  refreshAccessToken,
-  ChangeCurrentPassword,
-  updateAccountDetails,
-  updateUserAvatar,
-  registerSuperAdmin
+  verifySuperAdminEmail,
+  generateNewOtpForEmailVerification,
+  verifyEmailViaOtp,
 };
+
+// const verifySuperAdminEmail = asyncHandler(async (req, res) => {
+//   const { email } = req.body;
+//   const roleId = "7e207f29-a73b-4546-8ff8-30aea536b6b2";
+//   // ✅ Validate role_id as UUID
+//   if (!roleId || !isUUID(roleId)) {
+//     throw new ApiError(400, "Invalid role ID format");
+//   }
+
+//   const parser = new UAParser(req.headers["user-agent"]);
+//   const deviceInfo = parser.getResult();
+
+//   const verifyEmailRecord = await VerifyEmail.findOne({ where: { email } });
+
+//   if (verifyEmailRecord) {
+//     if (!verifyEmailRecord?.dataValues?.isEmailVerified) {
+
+//       throw new ApiError(
+//         409,
+//         `Email exists but is not verified. OTP has beed send to this email : ${email}  Enter OTP to verify the email.`
+//       );
+//     } else if (!verifyEmailRecord?.dataValues?.isUserCreated) {
+//       throw new ApiError(
+//         400,
+//         "Email already exists & verified but user not created fill the details to create the user"
+//       );
+//     } else {
+//       throw new ApiError(400, "Email already exists");
+//     }
+//   }
+
+//   const emailCreated = await VerifyEmail.create({
+//     email,
+//     role_id: roleId, // ✅ Valid UUID
+//   });
+
+//   // check for the existing OTP record (ordered by latest created)
+//   const existingOTP = await OTP.findOne({
+//     where: { verify_email_id: verifyEmailRecord.id },
+//   });
+
+//   let otpRecords;
+//   if (existingOTP) {
+//     if (new Date(existingOTP.expiresAt) <= new Date()) {
+//       // soft delete the expired otp
+//       await existingOTP.destroy();
+//       const generateRawOtp = rawOtp;
+//       // create a new OTP record
+//       otpRecords = await OTP.create({
+//         verify_email_id: verifyEmailRecord.id,
+//         roleId: roleId,
+//         rawOtp: generateRawOtp,
+//         purpose: "SIGNUP",
+//         expiresAt: otpExpiresAt(),
+//         maxAttempts: 5,
+//         ipAddress: req.ip,
+//         deviceInfo: JSON.stringify(deviceInfo),
+//       });
+//     } else {
+//       // If a valid OTP exists, you might want to return it or instruct the client to use it.
+//       throw new ApiError(
+//         409,
+//         "An OTP has already been sent and is still valid. Please check your email or request a new OTP if expired."
+//       );
+//     }
+//   } else {
+//     // No existing OTP record, so create one.
+//     const generateRawOtp = rawOtp;
+//     otpRecords = await OTP.create({
+//       verify_email_id: verifyEmailRecord.id,
+//       roleId: roleId,
+//       rawOtp: generateRawOtp,
+//       purpose: "SIGNUP",
+//       expiresAt: otpExpiresAt(), // 15 minutes from now
+//       maxAttempts: 5,
+//       ipAddress: req.ip,
+//       deviceInfo: JSON.stringify(deviceInfo),
+//     });
+//   }
+
+//   console.log("Email Created:", emailCreated);
+
+//   return res.json(new ApiResponse(200, { emailCreated }));
+// });
