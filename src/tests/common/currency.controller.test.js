@@ -1,8 +1,8 @@
 // tests/common/currency.controller.test.js
 import request from "supertest";
-import app from "../../app.js"; // Ensure this path correctly points to your Express app
 import Currency from "../../models/common_model/currency.model.js";
 import { sequelize } from "../../db/index.js";
+import app from "../../../app.js";
 
 describe("Currency API Endpoints", () => {
   // Before all tests, force sync the database (use a test DB)

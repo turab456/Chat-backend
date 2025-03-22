@@ -8,26 +8,37 @@ import { hashedOtp, otpExpiresAt, rawOtp } from "../../utils/otp.utils.js";
 import VerifyEmail from "../../models/common_model/verifyEmail.model.js";
 import { UAParser } from "ua-parser-js";
 import OTP from "../../models/common_model/otp.model.js";
+import logger from "../../utils/logger.utils.js";
+import { Op } from "sequelize";
+import { sendEmail } from "../../utils/emailService_custom.utils.js";
 
+/**
+ * Controller to verify super admin email and generate an OTP record.
+ * - If a VerifyEmail record exists and is not verified, it checks for an existing OTP.
+ *   - If a valid OTP exists, it instructs the client to use it.
+ *   - If an OTP exists but is expired, it soft-deletes it and generates a new OTP.
+ * - If no VerifyEmail record exists, it creates one and then generates an OTP record.
+ */
 const verifySuperAdminEmail = asyncHandler(async (req, res) => {
   const { email } = req.body;
   const roleId = "7e207f29-a73b-4546-8ff8-30aea536b6b2";
 
-  // Validate roleId as a valid UUID
+  // Validate roleId format
   if (!roleId || !isUUID(roleId)) {
+    logger.warn("Invalid role ID format", { roleId });
     throw new ApiError(400, "Invalid role ID format");
   }
 
   // Extract device details using ua-parser-js
   const parser = new UAParser(req.headers["user-agent"]);
   const deviceInfo = parser.getResult();
+  logger.info("Device info extracted", { deviceInfo });
 
   // Look for an existing verify email record
   let verifyEmailRecord = await VerifyEmail.findOne({ where: { email } });
-
   if (verifyEmailRecord) {
-    // If the email is already verified, we don't need to send a new OTP
     if (verifyEmailRecord.isEmailVerified) {
+      logger.warn("Email already verified", { email });
       throw new ApiError(400, "Email is already verified");
     }
 
@@ -36,47 +47,57 @@ const verifySuperAdminEmail = asyncHandler(async (req, res) => {
       where: { verify_email_id: verifyEmailRecord.id },
       order: [["createdAt", "DESC"]],
     });
-
     if (existingOTP) {
       if (new Date(existingOTP.expiresAt) > new Date()) {
-        // OTP is still valid – instruct the client to use it
+        logger.info("Valid OTP already exists", {
+          email,
+          otpId: existingOTP.id,
+        });
         throw new ApiError(
           409,
-          "An OTP has already been sent and is still valid. Please check your email or wait until it expires to request a new one or request a new OTP"
+          "An OTP has already been sent and is still valid. Please check your email or generate a new OTP"
         );
       } else {
-        // OTP is expired – soft delete it
         await existingOTP.destroy();
-        throw new ApiError(409, "OTP is not valid generate the new otp");
+        logger.info("Expired OTP soft-deleted", {
+          otpId: existingOTP.id,
+          email,
+        });
       }
     }
   } else {
-    // Create a new VerifyEmail record if it doesn't exist
     verifyEmailRecord = await VerifyEmail.create({
       email,
       role_id: roleId,
     });
+    logger.info("Created new VerifyEmail record", {
+      email,
+      verifyEmailId: verifyEmailRecord.id,
+    });
   }
 
   // Generate a new OTP record
-  const generatedRawOtp = rawOtp; // Ideally, generate a random OTP dynamically
+  const generatedRawOtp = rawOtp; // Replace with a random OTP generator as needed
+  console.log("OTP  : ",generatedRawOtp);
+  const hashedOTP = await hashedOtp(rawOtp);
   const newOTP = await OTP.create({
     verify_email_id: verifyEmailRecord.id,
-    roleId: roleId, // Ensure OTP model accepts UUID for roleId (remove isInt validation)
-    rawOtp: generatedRawOtp, // The hook on OTP model will hash this value
+    roleId: roleId,
+    rawOtp: generatedRawOtp, // Will be hashed via model hook
+    hashedOtp : hashedOTP,
     purpose: "SIGNUP",
-    expiresAt: otpExpiresAt(), // Set expiry 10 minutes from now
+    expiresAt: otpExpiresAt(), // 15 minutes expiry; adjust if needed
     maxAttempts: 5,
     ipAddress: req.ip,
     deviceInfo: JSON.stringify(deviceInfo),
   });
-
-  // Optionally update the VerifyEmail record with the new OTP ID
+  const sendingEmail =  await sendEmail(email ,generatedRawOtp );
+  console.log("OTP Sent Succesfullt : ",sendingEmail)
+  // Update VerifyEmail record with the new OTP ID (if you wish to track it)
   verifyEmailRecord.otp_id = newOTP.id;
   await verifyEmailRecord.save();
 
-  console.log("Email Created/Updated:", verifyEmailRecord);
-  console.log("New OTP Record:", newOTP);
+  logger.info("New OTP generated", { email, otpId: newOTP.id });
 
   return res.json(
     new ApiResponse(200, {
@@ -86,78 +107,108 @@ const verifySuperAdminEmail = asyncHandler(async (req, res) => {
   );
 });
 
-const generateNewOtpForEmailVerification = asyncHandler(async (req, res) => {
-  const { email } = req.body;
-  const roleId = "7e207f29-a73b-4546-8ff8-30aea536b6b2"; // Fixed role for super admin; ensure this is a valid UUID
+/**
+ * Controller to generate a new OTP for email verification.
+ * - It finds the VerifyEmail record and soft-deletes any existing OTP.
+ * - Then it generates a new OTP record and updates the VerifyEmail record.
+ */
+const generateNewOtpForEmailVerification = asyncHandler(
+  async (req, res) => {
+    const { email } = req.body;
+    const roleId = "7e207f29-a73b-4546-8ff8-30aea536b6b2";
 
-  // Validate roleId format
-  if (!roleId || !isUUID(roleId)) {
-    throw new ApiError(400, "Invalid role ID format");
+    // Validate roleId format
+    if (!roleId || !isUUID(roleId)) {
+      logger.warn("Invalid role ID format", { roleId });
+      throw new ApiError(400, "Invalid role ID format");
+    }
+
+    // Find the VerifyEmail record
+    const verifyEmailRecord = await VerifyEmail.findOne({ where: { email } });
+    if (!verifyEmailRecord) {
+      logger.warn("VerifyEmail record not found", { email });
+      throw new ApiError(404, "Verify email record not found");
+    }
+
+    if (verifyEmailRecord.isEmailVerified) {
+      logger.warn("Email is already verified", { email });
+      throw new ApiError(400, "Email is already verified");
+    }
+
+    // Soft-delete any existing OTP record for this email
+    const existingOtp = await OTP.findOne({
+      where: { verify_email_id: verifyEmailRecord.id },
+      order: [["createdAt", "DESC"]],
+    });
+    if (existingOtp) {
+      await existingOtp.destroy();
+      logger.info("Existing OTP soft-deleted", {
+        otpId: existingOtp.id,
+        email,
+      });
+    }
+
+    // Extract device info using ua-parser-js
+    const parser = new UAParser(req.headers["user-agent"]);
+    const deviceInfo = parser.getResult();
+
+    // Generate a new OTP record
+    const generatedRawOtp = rawOtp; // Replace with a random OTP generator as needed
+    console.log("OTP  : ",generatedRawOtp);
+    const hashedOTP = await hashedOtp(generatedRawOtp);
+    const newOtpRecord = await OTP.create({
+      verify_email_id: verifyEmailRecord.id,
+      roleId: roleId,
+      rawOtp: generatedRawOtp, // Will be hashed via model hook
+      hashedOtp : hashedOTP,
+      purpose: "SIGNUP",
+      expiresAt: otpExpiresAt(),
+      maxAttempts: 5,
+      ipAddress: req.ip,
+      deviceInfo: JSON.stringify(deviceInfo),
+    });
+    const sendingEmail =  await sendEmail(email ,generatedRawOtp );
+    console.log("OTP Sent Succesfullt : ",sendingEmail)
+    // Update VerifyEmail record with the new OTP ID
+    verifyEmailRecord.otp_id = newOtpRecord.id;
+    await verifyEmailRecord.save();
+
+    logger.info("New OTP generated (regeneration)", {
+      email,
+      // otpId: newOtpRecord.id,
+    });
+
+    return res.json(
+      new ApiResponse(200, {
+        message: "New OTP generated and sent to verify the email",
+        otpId: newOtpRecord.id,
+      })
+    );
   }
+);
 
-  // Find the VerifyEmail record
-  const verifyEmailRecord = await VerifyEmail.findOne({ where: { email } });
-  if (!verifyEmailRecord) {
-    throw new ApiError(404, "Verify email record not found");
-  }
-
-  // If the email is already verified, no new OTP is needed.
-  if (verifyEmailRecord.isEmailVerified) {
-    throw new ApiError(400, "Email is already verified");
-  }
-
-  // Soft-delete any existing OTP record for this email
-  const existingOtp = await OTP.findOne({
-    where: { verify_email_id: verifyEmailRecord.id },
-    order: [["createdAt", "DESC"]],
-  });
-  if (existingOtp) {
-    await existingOtp.destroy(); // soft delete due to paranoid:true in the OTP model
-  }
-
-  // Extract device info using ua-parser-js
-  const parser = new UAParser(req.headers["user-agent"]);
-  const deviceInfo = parser.getResult();
-
-  // Generate a new OTP record
-  const generatedRawOtp = rawOtp; // ideally, rawOtp returns a randomly generated OTP code
-  const newOtpRecord = await OTP.create({
-    verify_email_id: verifyEmailRecord.id,
-    roleId: roleId, // Ensure the OTP model accepts UUID for roleId
-    rawOtp: generatedRawOtp, // Will be hashed in the OTP model hook
-    purpose: "SIGNUP",
-    expiresAt: otpExpiresAt(), // 10 minutes from now
-    maxAttempts: 5,
-    ipAddress: req.ip,
-    deviceInfo: JSON.stringify(deviceInfo),
-  });
-
-  // Update the VerifyEmail record with the new OTP id (optional, if you want to track it)
-  verifyEmailRecord.otp_id = newOtpRecord.id;
-  await verifyEmailRecord.save();
-
-  return res.json(
-    new ApiResponse(200, {
-      message: "New OTP generated and sent to verify the email",
-      otpId: newOtpRecord.id,
-    })
-  );
-});
-
+/**
+ * Controller to verify the email using the OTP.
+ * - It checks that the VerifyEmail record exists.
+ * - It then finds the latest OTP record that is not expired.
+ * - It verifies the provided OTP; if incorrect, increments attempts.
+ * - On a match, marks the email as verified and soft-deletes the OTP record.
+ */
 const verifyEmailViaOtp = asyncHandler(async (req, res) => {
   const { email, otp } = req.body;
-
   if (!email || !otp) {
+    logger.warn("Email or OTP not provided", { email, otp });
     throw new ApiError(400, "Email and OTP are required");
   }
 
   // Retrieve the VerifyEmail record
   const verifyEmailRecord = await VerifyEmail.findOne({ where: { email } });
   if (!verifyEmailRecord) {
+    logger.warn("VerifyEmail record not found", { email });
     throw new ApiError(404, "No verification record found for this email");
   }
 
-  // Retrieve the latest OTP record that is still valid (not expired)
+  // Retrieve the latest valid OTP record
   const otpRecord = await OTP.findOne({
     where: {
       verify_email_id: verifyEmailRecord.id,
@@ -165,8 +216,8 @@ const verifyEmailViaOtp = asyncHandler(async (req, res) => {
     },
     order: [["createdAt", "DESC"]],
   });
-
   if (!otpRecord) {
+    logger.warn("OTP record not found or expired", { email });
     throw new ApiError(
       400,
       "OTP has expired or does not exist. Please request a new OTP."
@@ -175,27 +226,38 @@ const verifyEmailViaOtp = asyncHandler(async (req, res) => {
 
   // Check if maximum attempts have been reached
   if (otpRecord.attempts >= otpRecord.maxAttempts) {
+    logger.warn("Maximum OTP attempts exceeded", {
+      email,
+      otpId: otpRecord.id,
+      attempts: otpRecord.attempts,
+    });
     throw new ApiError(
       400,
       "Maximum OTP attempts exceeded. Please request a new OTP."
     );
   }
 
-  // Verify the OTP using the instance method on the OTP model
-  const isOtpValid = await otpRecord.verifyOTP(otp);
+  // Verify the OTP using the OTP model's instance method (using bcrypt.compare)
+  // console.log("this is the otp  : ",otp)
+  const isOtpValid = await OTP.verifyOTP(otpRecord,otp);
   if (!isOtpValid) {
-    // Increment the attempts and save the record
     otpRecord.attempts += 1;
     await otpRecord.save();
+    logger.warn("Incorrect OTP entered", {
+      email,
+      otpId: otpRecord.id,
+      attempts: otpRecord.attempts,
+    });
     throw new ApiError(400, "Incorrect OTP. Please try again.");
   }
 
-  // OTP is correct: mark the email as verified
+  // OTP is valid: mark the email as verified
   verifyEmailRecord.isEmailVerified = true;
   await verifyEmailRecord.save();
 
   // Soft-delete the OTP record after successful verification
   await otpRecord.destroy();
+  logger.info("Email successfully verified", { email });
 
   return res.json(
     new ApiResponse(200, { message: "Email successfully verified" })
