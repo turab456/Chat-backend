@@ -1,20 +1,11 @@
 import { asyncHandler } from "../../utils/asyncHandler.utils.js";
 import { ApiError } from "../../utils/ApiError.utils.js";
 import { ApiResponse } from "../../utils/ApiResponse.utils.js";
-import { validationResult } from "express-validator";
 import Currency from "../../models/common_model/currency.model.js";
 import logger from "../../utils/logger.utils.js";
 import { Op } from "sequelize";
 
 const getCurrency = asyncHandler(async (req, res) => {
-  const errors = validationResult(req);
-  if (!errors.isEmpty()) {
-    logger.error("Validation error fetching currencies", {
-      errors: errors.array(),
-    });
-    throw new ApiError(400, "Validation failed", errors.array());
-  }
-
   const { page = 1, limit = 10 } = req.query;
   const offset = (page - 1) * limit;
 
@@ -28,13 +19,6 @@ const getCurrency = asyncHandler(async (req, res) => {
 });
 
 const getCurrencyById = asyncHandler(async (req, res) => {
-  const errors = validationResult(req);
-  if (!errors.isEmpty()) {
-    logger.warn("Validation error fetching currency by id", {
-      error: errors.array(),
-    });
-    throw new ApiError(400, "Validation failed", errors.array());
-  }
   const { id } = req.params;
   console.log("this is the id  : ", id);
   const currency = await Currency.findByPk(id);
@@ -48,14 +32,6 @@ const getCurrencyById = asyncHandler(async (req, res) => {
 });
 
 const createCurrency = asyncHandler(async (req, res) => {
-  const errors = validationResult(req);
-  if (!errors.isEmpty()) {
-    logger.warn("Validation error creating currency", {
-      errors: errors.array(),
-    });
-    throw new ApiError(400, "Validation failed", errors.array());
-  }
-
   const { name, code, symbol } = req.body;
 
   const existingCurrency = await Currency.findOne({
@@ -96,13 +72,6 @@ const createCurrency = asyncHandler(async (req, res) => {
 });
 
 const updateCurrency = asyncHandler(async (req, res) => {
-  const errors = validationResult(req);
-  if (!errors.isEmpty()) {
-    logger.warn("Validation error updating currency", {
-      errors: errors.array(),
-    });
-    throw new ApiError(400, "Validation failed", errors.array());
-  }
   const { id } = req.params;
   const updatedData = req.body;
   const currency = await Currency.findByPk(id);
@@ -118,13 +87,6 @@ const updateCurrency = asyncHandler(async (req, res) => {
 });
 
 const deleteCurrency = asyncHandler(async (req, res) => {
-  const errors = validationResult(req);
-  if (!errors.isEmpty()) {
-    logger.warn("Validation error deleting currency", {
-      errors: errors.array(),
-    });
-    throw new ApiError(400, "Validation failed", errors.array());
-  }
   const { id } = req.params;
   const currency = await Currency.findByPk(id);
   console.log("1 : ", currency);

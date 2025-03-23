@@ -1,8 +1,18 @@
 import logger from "./logger.utils.js";
 import { ApiError } from "./ApiError.utils.js";
+import { validationResult } from "express-validator";
 
 const asyncHandler = (requestHandler) => {
   return (req, res, next) => {
+    // Handle validation automatically
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      logger.error("Validation error", {
+        errors: errors.array(),
+      });
+      return next(new ApiError(400, "Validation failed", errors.array()));
+    }
+
     Promise.resolve(requestHandler(req, res, next)).catch((err) => {
       // Log the error centrally
       logger.error(`Error in asyncHandler: ${err.message}`, {

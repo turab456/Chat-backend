@@ -1,24 +1,9 @@
-import nodemailer from "nodemailer";
+import bcrypt from "bcrypt";
 
-export const sendEmailOtp = async (email, otp) => {
-  const transporter = nodemailer.createTransport({
-    service: "Gmail",
-    auth: {
-      user: process.env.EMAIL_USER,
-      pass: process.env.EMAIL_PASS,
-    },
-  });
-
-  const mailOptions = {
-    from: process.env.EMAIL_USER,
-    to: email,
-    subject: "Your OTP Code",
-    text: `Your OTP is ${otp}. It is valid for 5 minutes.`,
-  };
-
-  await transporter.sendMail(mailOptions);
+const rawOtp = Math.floor(100000 + Math.random() * 900000).toString();
+const hashedOtp = async (rawOtp) => await bcrypt.hash(rawOtp, 10);
+const otpExpiresAt = () => {
+  return new Date(Date.now() + 10 * 60 * 1000); // 15 minutes from now
 };
 
-export const sendSmsOtp = async (mobile, otp) => {
-  // Integrate an SMS provider like Twilio / MSG91
-};
+export { rawOtp, hashedOtp, otpExpiresAt };

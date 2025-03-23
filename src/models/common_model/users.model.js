@@ -3,14 +3,7 @@ import { DataTypes, Op } from "sequelize";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 
-const validateIPAddress = (ip) => {
-  const ipV4Pattern =
-    /^(25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9]?[0-9])(\.(25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9]?[0-9])){3}$/;
-  const ipV6Pattern =
-    /^(([0-9a-fA-F]{1,4}:){7,7}[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,7}:|([0-9a-fA-F]{1,4}:){1,6}:[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,5}(:[0-9a-fA-F]{1,4}){1,2}|([0-9a-fA-F]{1,4}:){1,4}(:[0-9a-fA-F]{1,4}){1,3}|([0-9a-fA-F]{1,4}:){1,3}(:[0-9a-fA-F]{1,4}){1,4}|([0-9a-fA-F]{1,4}:){1,2}(:[0-9a-fA-F]{1,4}){1,5}|[0-9a-fA-F]{1,4}:((:[0-9a-fA-F]{1,4}){1,6})|:((:[0-9a-fA-F]{1,4}){1,7}|:)|fe80:(:[0-9a-fA-F]{0,4}){0,4}%[0-9a-zA-Z]{1,}|::(ffff(:0{1,4}){0,1}:){0,1}((25[0-5]|(2[0-4]|1{0,1}[0-9])?[0-9])\.){3,3}(25[0-5]|(2[0-4]|1{0,1}[0-9])?[0-9])|([0-9a-fA-F]{1,4}:){1,4}:((25[0-5]|(2[0-4]|1{0,1}[0-9])?[0-9])\.){3,3}(25[0-5]|(2[0-4]|1{0,1}[0-9])?[0-9]))$/;
 
-  return ipV4Pattern.test(ip) || ipV6Pattern.test(ip);
-};
 
 const Users = sequelize.define(
   "users",
@@ -37,34 +30,44 @@ const Users = sequelize.define(
       onDelete: "RESTRICT",
       onUpdate: "CASCADE",
     },
-    language_id: {
+    user_session_id : {
       type: DataTypes.UUID,
-      allowNull: true,
-    },
-    currency_id: {
-      type: DataTypes.UUID,
-      allowNull: true,
-    },
-    ipAddresses: {
-      type: DataTypes.ARRAY(DataTypes.STRING),
       allowNull: false,
-      defaultValue: [],
-      validate: {
-        isValidIPs(value) {
-          if (!Array.isArray(value) || value.length > 2) {
-            throw new Error("A maximum of two valid IP addresses is allowed.");
-          }
-          for (const ip of value) {
-            if (!validateIPAddress(ip)) {
-              throw new Error(`Invalid IP address format: ${ip}`);
-            }
-          }
-        },
+      references : {
+        model : 'user_sessions',
+        key:'id'
       },
-      set(value) {
-        this.setDataValue("ipAddresses", value.slice(0, 2));
-      },
+      onDelete: "RESTRICT",
+      onUpdate: "CASCADE",
     },
+    // language_id: {
+    //   type: DataTypes.UUID,
+    //   allowNull: true,
+    // },
+    // currency_id: {
+    //   type: DataTypes.UUID,
+    //   allowNull: true,
+    // },
+    // ipAddresses: {
+    //   type: DataTypes.ARRAY(DataTypes.STRING),
+    //   allowNull: false,
+    //   defaultValue: [],
+    //   validate: {
+    //     isValidIPs(value) {
+    //       if (!Array.isArray(value) || value.length > 2) {
+    //         throw new Error("A maximum of two valid IP addresses is allowed.");
+    //       }
+    //       for (const ip of value) {
+    //         if (!validateIPAddress(ip)) {
+    //           throw new Error(`Invalid IP address format: ${ip}`);
+    //         }
+    //       }
+    //     },
+    //   },
+    //   set(value) {
+    //     this.setDataValue("ipAddresses", value.slice(0, 2));
+    //   },
+    // },
     password: {
       type: DataTypes.STRING,
       allowNull: false,
@@ -94,9 +97,9 @@ const Users = sequelize.define(
       },
     },
     isActive: {
-      type: DataTypes.BOOLEAN,
-      allowNull: false,
-      defaultValue: true,
+      type: DataTypes.ENUM("active", "inactive", "suspended"),
+      defaultValue: "active",
+      allowNull : false
     },
     lastUsedAt: {
       type: DataTypes.DATE,
@@ -107,6 +110,7 @@ const Users = sequelize.define(
   {
     tableName: "users",
     timestamps: true,
+    paranoid : true,
     indexes: [
       { unique: false, fields: ["user_role_id"] },
       { unique: false, fields: ["isActive"] },
@@ -128,39 +132,39 @@ Users.isPasswordCorrect = async function (password) {
   return bcrypt.compare(password, this.password);
 };
 
-Users.generateAccessToken = function () {
-  return jwt.sign(
-    {
-      id: this.user_id,
-      role_id: this.user_role_id,
-    },
-    process.env.ACCESS_TOKEN_SECRET,
-    { expiresIn: process.env.ACCESS_TOKEN_EXPIRES }
-  );
-};
+// Users.generateAccessToken = function () {
+//   return jwt.sign(
+//     {
+//       id: this.user_id,
+//       role_id: this .user_role_id,
+//     },
+//     process.env.ACCESS_TOKEN_SECRET,
+//     { expiresIn: process.env.ACCESS_TOKEN_EXPIRES }
+//   );
+// };
 
-Users.generateRefreshToken = function () {
-  return jwt.sign(
-    {
-      id: this.user_id,
-    },
-    process.env.REFRESH_TOKEN_SECRET,
-    {
-      expiresIn: process.env.REFRESH_TOKEN_EXPIRES,
-    }
-  );
-};
+// Users.generateRefreshToken = function () {
+//   return jwt.sign(
+//     {
+//       id: this.user_id,
+//     },
+//     process.env.REFRESH_TOKEN_SECRET,
+//     {
+//       expiresIn: process.env.REFRESH_TOKEN_EXPIRES,
+//     }
+//   );
+// };
 
 Users.markInactiveUsers = async function () {
   const sixMonthsAgo = new Date();
   sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
 
   await Users.update(
-    { isActive: false },
+    { isActive: 'inactive' },
     {
       where: {
         lastUsedAt: { [Op.lt]: sixMonthsAgo },
-        isActive: true,
+        isActive: 'active',
       },
     }
   );

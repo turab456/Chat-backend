@@ -16,10 +16,10 @@ const languages = [
 
 export default async function seedLanguages() {
   try {
-    await sequelize.authenticate();
-    console.log("🔗 Connected to the database.");
+    // await sequelize.authenticate();
+    // console.log("🔗 Connected to the database.");
 
-    await sequelize.sync(); // Ensure the table exists
+    // await sequelize.sync(); // Ensure the table exists
 
     for (const lang of languages) {
       await Language.findOrCreate({
@@ -36,9 +36,6 @@ export default async function seedLanguages() {
     console.log("🎉 Language seeding completed successfully!");
   } catch (error) {
     console.error("❌ Error seeding languages:", error.message);
-  } finally {
-    await sequelize.close();
-    console.log("🔌 Database connection closed.");
   }
 }
 

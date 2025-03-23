@@ -26,7 +26,8 @@ import {
   getLanguageByIdValidation,
   getLanguagesValidation,
   updateLanguageValidation,
-} from "../../validations/common/currency/language.validation.js";
+} from "../../validations/common/language/language.validation.js";
+import { getRoles } from "../../controllers/common/roles.controller.js";
 
 const router = Router();
 // put the validation middleware while registering the controllers
@@ -45,5 +46,8 @@ router.route("/languages", getLanguagesValidation).get(getLanguages);
 router.route("/languages/:id", getLanguageByIdValidation).get(getLanguageById);
 router.route("/languages/:id", updateLanguageValidation).put(updateLanguage);
 router.route("/languages/:id", deleteLanguageValidation).delete(deleteLanguage);
+
+// roles 
+router.route('/roles').get(getRoles)
 
 export default router;

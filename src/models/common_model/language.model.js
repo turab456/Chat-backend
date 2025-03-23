@@ -11,7 +11,7 @@ const Language = sequelize.define(
       allowNull: false,
     },
     name: {
-      type: DataTypes.STRING(100),
+      type: DataTypes.STRING(50),
       allowNull: false,
       unique: true,
       validate: {

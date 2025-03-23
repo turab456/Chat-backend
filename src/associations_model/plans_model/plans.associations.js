@@ -3,13 +3,17 @@ import PlansPackage from "../../models/plans_model/plans_package.model.js";
 
 // Define Associations Here
 // PlanPackage belongs to SchoolOwner (Foreign key: school_owner_id_fk)
-PlanType.hasOne(PlansPackage, {
-  foreignKey: "plan_type_id_fk",
-  onDelete: "CASCADE",
-  onUpdate: "CASCADE",
-});
+const PlanTypeAssociation = () => {
+  PlanType.hasOne(PlansPackage, {
+    foreignKey: "plan_type_id_fk",
+    onDelete: "CASCADE",
+    onUpdate: "CASCADE",
+  });
+  
+  // SchoolOwner has many PlanPackages
+  PlansPackage.belongsTo(PlanType, {
+    foreignKey: "plan_type_id_fk",
+  });
+}
 
-// SchoolOwner has many PlanPackages
-PlansPackage.belongsTo(PlanType, {
-  foreignKey: "plan_type_id_fk",
-});
+export default PlanTypeAssociation;

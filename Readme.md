@@ -141,3 +141,36 @@ crontab -e
 
 Add this line to execute the script every 6 hours:
 0 */6 * * * node /path-to-your-project/scripts/updateCurrencies.js
+
+
+// const sendOtp = async () => {
+//   const otp = Math.floor(100000 + Math.random() * 900000); // Generate 6-digit OTP
+
+//   try {
+//     const response = await sendEmail({
+//       to: 'sufiturabhussain@gmail.com',
+//       subject: 'Your OTP Code for Login',
+//       text: `Your OTP code is: ${otp}. It will expire in 5 minutes.`,
+//       html: `
+//         <div style="font-family: Arial, sans-serif; color: #333; padding: 20px; border: 1px solid #ddd; border-radius: 10px; background-color: #f9f9f9; max-width: 400px;">
+//           <h2 style="color: #4CAF50; text-align: center;">Your OTP Code</h2>
+//           <p style="font-size: 16px;">Hello,</p>
+//           <p style="font-size: 16px;">Use the following OTP to complete your login:</p>
+//           <div style="font-size: 24px; font-weight: bold; color: #4CAF50; text-align: center; margin: 20px 0;">
+//             ${otp}
+//           </div>
+//           <p style="font-size: 16px;">This OTP will expire in <strong>5 minutes</strong>. Do not share it with anyone.</p>
+//           <p style="font-size: 14px; color: #999; text-align: center;">
+//             If you did not request this, please ignore this email.
+//           </p>
+//         </div>
+//       `,
+//     });
+
+//     console.log('✅ OTP email sent:', response);
+//   } catch (error) {
+//     console.error('❌ Error:', error.message);
+//   }
+// };
+
+// sendOtp()

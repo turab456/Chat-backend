@@ -2,6 +2,8 @@ import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import { DataTypes } from "sequelize";
 import { sequelize } from "../../db/index.js";
+import Currency from "../common_model/currency.model.js";
+import Language from "../common_model/language.model.js";
 
 const SuperAdmin = sequelize.define(
   "super_admin",
@@ -28,6 +30,11 @@ const SuperAdmin = sequelize.define(
         notEmpty: { msg: "Email is required" },
       },
     },
+    emailVerified: {
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: false,
+    },
     phone_number: {
       type: DataTypes.STRING,
       allowNull: true,
@@ -38,6 +45,11 @@ const SuperAdmin = sequelize.define(
           msg: "Phone number must be in a valid format",
         },
       },
+    },
+    phone_numberVerify: {
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: false,
     },
     role_id: {
       type: DataTypes.UUID,
@@ -56,16 +68,74 @@ const SuperAdmin = sequelize.define(
         },
       },
     },
-    status: {
-      type: DataTypes.ENUM("active", "inactive", "suspended"),
-      defaultValue: "active",
+    currency_id: {
+      type: DataTypes.UUID,
+      allowNull: true,
+      references: {
+        model: "currencies",
+        key: "id",
+      },
+      onDelete: "CASCADE",
+      onUpdate: "CASCADE",
+      validate: {
+        isUUID: {
+          args: 4,
+          msg: "Currency ID must be a valid UUID",
+        },
+        async existsInCurrency(value) {
+          if (value) {
+            const currency = await Currency.findByPk(value);
+            if (!currency) {
+              throw new Error("Currency ID is invalid or does not exist");
+            }
+          }
+        },
+      },
     },
+    language_id: {
+      type: DataTypes.UUID,
+      allowNull: true,
+      references: {
+        model: "languages", // Must match the table name of your Language model
+        key: "id",
+      },
+      onDelete: "CASCADE",
+      onUpdate: "CASCADE",
+      validate: {
+        isUUID: {
+          args: 4,
+          msg: "Language ID must be a valid UUID",
+        },
+        async existsInLanguage(value) {
+          if (value) {
+            const language = await Language.findByPk(value);
+            if (!language) {
+              throw new Error("Language ID is invalid or does not exist");
+            }
+          }
+        },
+      },
+    },
+    // status: {
+    //   type: DataTypes.ENUM("active", "inactive", "suspended"),
+    //   defaultValue: "active",
+    // },
     profile_picture: {
       type: DataTypes.TEXT,
       allowNull: true,
       validate: {
         isUrl: { msg: "Profile picture must be a valid URL" },
       },
+    },
+    isEmailVerify_id: {
+      type: DataTypes.UUID,
+      allowNull: true,
+      references: {
+        model: "verify_email",
+        key: "id",
+      },
+      onDelete: "CASCADE",
+      onUpdate: "CASCADE",
     },
     last_login: {
       type: DataTypes.DATE,
@@ -76,6 +146,7 @@ const SuperAdmin = sequelize.define(
     tableName: "super_admin",
     underscored: true,
     timestamps: true,
+    paranoid: true,
     indexes: [
       {
         name: "idx_super_admin_full_name",
@@ -133,9 +204,13 @@ SuperAdmin.generateAccessToken = function () {
 
 // Instance method for generating refresh token
 SuperAdmin.generateRefreshToken = function () {
-  return jwt.sign({ id: this.super_admin_id }, process.env.REFRESH_TOKEN_SECRET, {
-    expiresIn: process.env.ACCESS_TOKEN_EXPIRES,
-  });
+  return jwt.sign(
+    { id: this.super_admin_id, role_id: this.role_id },
+    process.env.REFRESH_TOKEN_SECRET,
+    {
+      expiresIn: process.env.ACCESS_TOKEN_EXPIRES,
+    }
+  );
 };
 
 // ✅ Method to update last login timestamp
