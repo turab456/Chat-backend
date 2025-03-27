@@ -28,7 +28,7 @@ const Association = () => {
   verifyEmailAssociation();
   // LanguageAssociation();
   // CurrencyAssociation();
-  // insertUserRoles();
+  insertUserRoles();
   // always put these two at the last only
   // updateCurrencies();
   // seedLanguages();

@@ -33,127 +33,123 @@ const transporter = nodemailer.createTransport({
 // Function to send an email
 // export async function sendEmail(to, subject, text, OTP_CODE) {
 export async function sendEmail(to, OTP_CODE) {
+  // Calculate a static time string for the countdown timer (since JS doesn't run in emails)
+  const expirationTime = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes in milliseconds
+  const expirationTimeString = expirationTime.toLocaleString(); // Readable format, e.g., "12/25/2025, 2:30:45 PM"
+
   const mailOptions = {
     from: `MASKAN LMS ${process.env.EMAIL_FROM}`, // Sender address (e.g., "Your Name <your_email@gmail.com>")
     to: to, // Recipient email address
     subject: "Email Verification - Your One-Time Password (OTP)", // Email subject
     text: "", // Plain text body
-    html: `<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <title>Maskan LMS - Verify Your Email</title>
-  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;700&display=swap" rel="stylesheet">
-  <style>
-    /* Global Styles */
-    body, html {
-      margin: 0;
-      padding: 0;
-      background: #000; /* Black background */
-      font-family: 'Roboto', sans-serif;
-      color: #f0f0f0;
-    }
-    .container {
-      max-width: 600px;
-      margin: 40px auto;
-      padding: 30px;
-      border-radius: 20px;
-      background: rgba(0, 0, 0, 0.4); /* Dark translucent */
-      border: 1px solid rgba(255, 255, 255, 0.1);
-      backdrop-filter: blur(10px);
-      -webkit-backdrop-filter: blur(10px);
-      box-shadow:  20px 20px 60px rgba(0, 0, 0, 0.9),
-                   -20px -20px 60px rgba(255, 255, 255, 0.1);
-    }
-    h1 {
-      text-align: center;
-      font-size: 32px;
-      font-weight: 700;
-      margin-bottom: 5px;
-      color: #a2d2ff;
-    }
-    h2 {
-      text-align: center;
-      font-size: 24px;
-      font-weight: 400;
-      margin-bottom: 20px;
-      color: #a2d2ff;
-    }
-    p {
-      text-align: center;
-      font-size: 16px;
-      line-height: 1.6;
-      margin: 15px 0;
-      color: #ddd;
-    }
-    /* Elevated Neumorphic Glass Effect for OTP */
-    .otp {
-      margin: 20px auto;
-      padding: 20px 25px;
-      max-width: 300px;
-      border-radius: 15px;
-      font-size: 48px;
-      font-weight: 700;
-      letter-spacing: 6px;
-      text-align: center;
-      color: #ffffff;
-      background: rgba(255, 255, 255, 0.1);
-      box-shadow: 
-        inset 6px 6px 12px rgba(0, 0, 0, 0.8),
-        inset -6px -6px 12px rgba(255, 255, 255, 0.1),
-        6px 6px 12px rgba(0, 0, 0, 0.9),
-        -6px -6px 12px rgba(255, 255, 255, 0.1);
-      backdrop-filter: blur(5px);
-      -webkit-backdrop-filter: blur(5px);
-    }
-    .button {
-      display: block;
-      width: 200px;
-      margin: 30px auto;
-      padding: 12px 0;
-      text-align: center;
-      text-decoration: none;
-      font-weight: 700;
-      color: #a2d2ff;
-      background: rgba(255, 255, 255, 0.1);
-      border-radius: 30px;
-      border: 1px solid rgba(255, 255, 255, 0.2);
-      box-shadow:  6px 6px 12px rgba(0, 0, 0, 0.9),
-                   -6px -6px 12px rgba(255, 255, 255, 0.1);
-      backdrop-filter: blur(5px);
-      -webkit-backdrop-filter: blur(5px);
-      transition: all 0.2s ease;
-    }
-    .button:hover {
-      box-shadow: inset 6px 6px 12px rgba(0, 0, 0, 0.9),
-                  inset -6px -6px 12px rgba(255, 255, 255, 0.1);
-      color: #7bbcff;
-    }
-    .footer {
-      text-align: center;
-      font-size: 12px;
-      color: #aaa;
-      margin-top: 30px;
-    }
-  </style>
-</head>
-<body>
-  <div class="container">
-    <h1>Maskan LMS</h1>
-    <h2>Email Verification</h2>
-    <p>Hello,</p>
-    <p>Welcome to Maskan LMS – where cutting-edge technology meets seamless learning. To complete your registration, please use the OTP below to verify your email address:</p>
-    <div class="otp">${OTP_CODE}</div>
-    <p>This OTP is valid for 10 minutes. If you did not request this verification, please ignore this email or contact support.</p>
-    <a class="button" href="https://maskanlms.com/support">Contact Support</a>
-    <p>Thank you for choosing Maskan LMS. Elevate your learning experience with us!</p>
-  </div>
-  <div class="footer">
-    &copy; 2025 Maskan Technologies Pvt Ltd. All rights reserved.
-  </div>
-</body>
-</html>
-`,
+    html: `
+    <!DOCTYPE html>
+      <html lang="en">
+      <head>
+        <meta charset="UTF-8">
+        <title>Maskan LMS - Verify Your Email</title>
+        <style>
+          /* Global Styles */
+          body, html {
+            margin: 0;
+            padding: 0;
+            background: #000;
+            font-family: Arial, sans-serif;
+            color: #f0f0f0;
+          }
+          .container {
+            max-width: 600px;
+            margin: 40px auto;
+            padding: 30px;
+            border-radius: 20px;
+            background: linear-gradient(to bottom, #1a1a1a, #000);
+            border: 1px solid #333;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+          }
+          h1 {
+            text-align: center;
+            font-size: 32px;
+            font-weight: bold;
+            margin-bottom: 5px;
+            color: #00aaff;
+            text-shadow: 0 0 10px #00aaff;
+          }
+          h2 {
+            text-align: center;
+            font-size: 24px;
+            font-weight: normal;
+            margin-bottom: 20px;
+            color: #00aaff;
+          }
+          p {
+            text-align: center;
+            font-size: 16px;
+            line-height: 1.6;
+            margin: 15px 0;
+            color: #ddd;
+          }
+          .otp {
+            font-family: 'Courier New', monospace;
+            font-size: 48px;
+            font-weight: bold;
+            letter-spacing: 6px;
+            text-align: center;
+            color: #00aaff;
+            background: #333;
+            padding: 20px;
+            border-radius: 10px;
+            border: 2px solid #00aaff;
+            margin: 20px auto;
+            max-width: 300px;
+            text-shadow: 0 0 5px #00aaff;
+          }
+          .timer {
+            text-align: center;
+            font-size: 16px;
+            color: #ff6666;
+            margin-top: -10px;
+          }
+          .button {
+            display: block;
+            width: 200px;
+            margin: 30px auto;
+            padding: 12px 0;
+            text-align: center;
+            text-decoration: none;
+            font-weight: bold;
+            color: #fff;
+            background: linear-gradient(45deg, #00aaff, #0077cc);
+            border-radius: 30px;
+            border: none;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+          }
+          .footer {
+            text-align: center;
+            font-size: 12px;
+            color: #aaa;
+            margin-top: 30px;
+          }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <h1>Maskan LMS</h1>
+          <h2>Email Verification</h2>
+          <p>Hello,</p>
+          <p>Step into the future of education with Maskan LMS. Our state-of-the-art platform is engineered to deliver an unparalleled learning experience, seamlessly blending cutting-edge technology with intuitive design. To unlock your journey and secure your account, please verify your email address using the exclusive One-Time Password (OTP) provided below:</p>
+          <div class="otp">${OTP_CODE}</div>
+          <p class="timer">⏳ This OTP will expire at ${expirationTimeString}. Please use it before then.</p>
+          <p>Should this verification request be unanticipated, we recommend disregarding this message or contacting our dedicated support team for immediate assistance.</p>
+          <a class="button" href="https://maskanlms.com/support">Contact Support</a>
+          <p>We are privileged to welcome you to the Maskan LMS community. Prepare to embark on a transformative educational odyssey unlike any other.</p>
+        </div>
+        <div class="footer">
+          © 2025 Maskan Technologies Pvt Ltd. All rights reserved.
+        </div>
+      </body>
+      </html>
+    `,
+    replyTo: "no-reply@maskanlms.com", // "No reply" address
   };
 
   try {

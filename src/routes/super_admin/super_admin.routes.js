@@ -1,6 +1,7 @@
 import { Router } from "express";
 import {
   generateNewOtpForEmailVerification,
+  registerSuperAdmin,
   verifyEmailViaOtp,
   verifySuperAdminEmail,
 } from "../../controllers/auth/auth.controller.js";
@@ -13,15 +14,15 @@ import {
 } from "../../validations/super_admin/super_admin.validation.js";
 const router = Router();
 
-// router.route("/registersuperadmin",upload).post(
-//   upload.fields([
-//     {
-//       name: "profile",
-//       maxCount: 1,
-//     },
-//   ]),
-//   registerSuperAdmin
-// );
+router.route("/registersuperadmin",upload).post(
+  upload.fields([
+    {
+      name: "profile",
+      maxCount: 1,
+    },
+  ]),
+  registerSuperAdmin
+);
 
 // routes for otp and signup
 router.route("/verifyemail", verifySuperAdminValidation).post(verifySuperAdminEmail);

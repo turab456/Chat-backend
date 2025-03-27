@@ -56,16 +56,6 @@ const UserSessions = sequelize.define(
         this.setDataValue("ipAddresses", value.slice(0, 2));
       },
     },
-
-    // ipAddress: {
-    //   type: DataTypes.STRING,
-    //   allowNull: false,
-    //   validate: {
-    //     isIP: {
-    //       msg: "Must be a valid IP address",
-    //     },
-    //   },
-    // },
     userAgent: {
       type: DataTypes.STRING,
       allowNull: false,

@@ -11,6 +11,10 @@ import OTP from "../../models/common_model/otp.model.js";
 import logger from "../../utils/logger.utils.js";
 import { Op } from "sequelize";
 import { sendEmail } from "../../utils/emailService_custom.utils.js";
+import { identifyUserRoleId, isEmailVerified } from "../../utils/helper.utils.js";
+import SuperAdmin from "../../models/super_admin/super_admin.model.js";
+import UserRole from "../../models/user_roles.model.js";
+
 
 /**
  * Controller to verify super admin email and generate an OTP record.
@@ -21,7 +25,10 @@ import { sendEmail } from "../../utils/emailService_custom.utils.js";
  */
 const verifySuperAdminEmail = asyncHandler(async (req, res) => {
   const { email } = req.body;
-  const roleId = "7e207f29-a73b-4546-8ff8-30aea536b6b2";
+
+  const role_id =  await identifyUserRoleId("Super_Admin");
+  console.log("role id ; ",role_id)
+  const roleId = `${role_id}`;
 
   // Validate roleId format
   if (!roleId || !isUUID(roleId)) {
@@ -78,21 +85,21 @@ const verifySuperAdminEmail = asyncHandler(async (req, res) => {
 
   // Generate a new OTP record
   const generatedRawOtp = rawOtp; // Replace with a random OTP generator as needed
-  console.log("OTP  : ",generatedRawOtp);
+  console.log("OTP  : ", generatedRawOtp);
   const hashedOTP = await hashedOtp(rawOtp);
   const newOTP = await OTP.create({
     verify_email_id: verifyEmailRecord.id,
     roleId: roleId,
     rawOtp: generatedRawOtp, // Will be hashed via model hook
-    hashedOtp : hashedOTP,
+    hashedOtp: hashedOTP,
     purpose: "SIGNUP",
     expiresAt: otpExpiresAt(), // 15 minutes expiry; adjust if needed
     maxAttempts: 5,
     ipAddress: req.ip,
     deviceInfo: JSON.stringify(deviceInfo),
   });
-  const sendingEmail =  await sendEmail(email ,generatedRawOtp );
-  console.log("OTP Sent Succesfullt : ",sendingEmail)
+  const sendingEmail = await sendEmail(email, generatedRawOtp);
+  console.log("OTP Sent Succesfullt : ", sendingEmail);
   // Update VerifyEmail record with the new OTP ID (if you wish to track it)
   verifyEmailRecord.otp_id = newOTP.id;
   await verifyEmailRecord.save();
@@ -112,80 +119,81 @@ const verifySuperAdminEmail = asyncHandler(async (req, res) => {
  * - It finds the VerifyEmail record and soft-deletes any existing OTP.
  * - Then it generates a new OTP record and updates the VerifyEmail record.
  */
-const generateNewOtpForEmailVerification = asyncHandler(
-  async (req, res) => {
-    const { email } = req.body;
-    const roleId = "7e207f29-a73b-4546-8ff8-30aea536b6b2";
+const generateNewOtpForEmailVerification = asyncHandler(async (req, res) => {
+  const { email } = req.body;
 
-    // Validate roleId format
-    if (!roleId || !isUUID(roleId)) {
-      logger.warn("Invalid role ID format", { roleId });
-      throw new ApiError(400, "Invalid role ID format");
-    }
+  const role_id =  await identifyUserRoleId("Super_Admin");
+  console.log("role id ; ",role_id)
+  const roleId = `${role_id}`;
 
-    // Find the VerifyEmail record
-    const verifyEmailRecord = await VerifyEmail.findOne({ where: { email } });
-    if (!verifyEmailRecord) {
-      logger.warn("VerifyEmail record not found", { email });
-      throw new ApiError(404, "Verify email record not found");
-    }
-
-    if (verifyEmailRecord.isEmailVerified) {
-      logger.warn("Email is already verified", { email });
-      throw new ApiError(400, "Email is already verified");
-    }
-
-    // Soft-delete any existing OTP record for this email
-    const existingOtp = await OTP.findOne({
-      where: { verify_email_id: verifyEmailRecord.id },
-      order: [["createdAt", "DESC"]],
-    });
-    if (existingOtp) {
-      await existingOtp.destroy();
-      logger.info("Existing OTP soft-deleted", {
-        otpId: existingOtp.id,
-        email,
-      });
-    }
-
-    // Extract device info using ua-parser-js
-    const parser = new UAParser(req.headers["user-agent"]);
-    const deviceInfo = parser.getResult();
-
-    // Generate a new OTP record
-    const generatedRawOtp = rawOtp; // Replace with a random OTP generator as needed
-    console.log("OTP  : ",generatedRawOtp);
-    const hashedOTP = await hashedOtp(generatedRawOtp);
-    const newOtpRecord = await OTP.create({
-      verify_email_id: verifyEmailRecord.id,
-      roleId: roleId,
-      rawOtp: generatedRawOtp, // Will be hashed via model hook
-      hashedOtp : hashedOTP,
-      purpose: "SIGNUP",
-      expiresAt: otpExpiresAt(),
-      maxAttempts: 5,
-      ipAddress: req.ip,
-      deviceInfo: JSON.stringify(deviceInfo),
-    });
-    const sendingEmail =  await sendEmail(email ,generatedRawOtp );
-    console.log("OTP Sent Succesfullt : ",sendingEmail)
-    // Update VerifyEmail record with the new OTP ID
-    verifyEmailRecord.otp_id = newOtpRecord.id;
-    await verifyEmailRecord.save();
-
-    logger.info("New OTP generated (regeneration)", {
-      email,
-      // otpId: newOtpRecord.id,
-    });
-
-    return res.json(
-      new ApiResponse(200, {
-        message: "New OTP generated and sent to verify the email",
-        otpId: newOtpRecord.id,
-      })
-    );
+  // Validate roleId format
+  if (!roleId || !isUUID(roleId)) {
+    logger.warn("Invalid role ID format", { roleId });
+    throw new ApiError(400, "Invalid role ID format");
   }
-);
+
+  // Find the VerifyEmail record
+  const verifyEmailRecord = await VerifyEmail.findOne({ where: { email } });
+  if (!verifyEmailRecord) {
+    logger.warn("VerifyEmail record not found", { email });
+    throw new ApiError(404, "Verify email record not found");
+  }
+
+  if (verifyEmailRecord.isEmailVerified) {
+    logger.warn("Email is already verified", { email });
+    throw new ApiError(400, "Email is already verified");
+  }
+
+  // Soft-delete any existing OTP record for this email
+  const existingOtp = await OTP.findOne({
+    where: { verify_email_id: verifyEmailRecord.id },
+    order: [["createdAt", "DESC"]],
+  });
+  if (existingOtp) {
+    await existingOtp.destroy();
+    logger.info("Existing OTP soft-deleted", {
+      otpId: existingOtp.id,
+      email,
+    });
+  }
+
+  // Extract device info using ua-parser-js
+  const parser = new UAParser(req.headers["user-agent"]);
+  const deviceInfo = parser.getResult();
+
+  // Generate a new OTP record
+  const generatedRawOtp = rawOtp; // Replace with a random OTP generator as needed
+  console.log("OTP  : ", generatedRawOtp);
+  const hashedOTP = await hashedOtp(generatedRawOtp);
+  const newOtpRecord = await OTP.create({
+    verify_email_id: verifyEmailRecord.id,
+    roleId: roleId,
+    rawOtp: generatedRawOtp, // Will be hashed via model hook
+    hashedOtp: hashedOTP,
+    purpose: "SIGNUP",
+    expiresAt: otpExpiresAt(),
+    maxAttempts: 5,
+    ipAddress: req.ip,
+    deviceInfo: JSON.stringify(deviceInfo),
+  });
+  const sendingEmail = await sendEmail(email, generatedRawOtp);
+  console.log("OTP Sent Succesfullt : ", sendingEmail);
+  // Update VerifyEmail record with the new OTP ID
+  verifyEmailRecord.otp_id = newOtpRecord.id;
+  await verifyEmailRecord.save();
+
+  logger.info("New OTP generated (regeneration)", {
+    email,
+    // otpId: newOtpRecord.id,
+  });
+
+  return res.json(
+    new ApiResponse(200, {
+      message: "New OTP generated and sent to verify the email",
+      otpId: newOtpRecord.id,
+    })
+  );
+});
 
 /**
  * Controller to verify the email using the OTP.
@@ -239,7 +247,7 @@ const verifyEmailViaOtp = asyncHandler(async (req, res) => {
 
   // Verify the OTP using the OTP model's instance method (using bcrypt.compare)
   // console.log("this is the otp  : ",otp)
-  const isOtpValid = await OTP.verifyOTP(otpRecord,otp);
+  const isOtpValid = await OTP.verifyOTP(otpRecord, otp);
   if (!isOtpValid) {
     otpRecord.attempts += 1;
     await otpRecord.save();
@@ -264,92 +272,48 @@ const verifyEmailViaOtp = asyncHandler(async (req, res) => {
   );
 });
 
+/**
+ * Controller to register the user
+ * - Take the language and currency id from the api
+ * - Register the user if the registered email is verified
+ * - Check wether the email is verified or not if verified then only create the user
+ * - Upload the profile photo using multer middleware
+ * - once user if registered the store the session details of the user in user session (user_session.model.js)
+ * - Store the device details of the user and user can't login in more than 2 devices
+ * - if they try to login into third device they may need to logout from any of the two devices
+ */
+
+const registerSuperAdmin = asyncHandler(async (req, res) => {
+  const { full_name, email, currency_id, language_id, password } = req.body;
+  const avatarLocalPath = req?.files?.avatar[0]?.path;
+  
+  const role = UserRole.findOne({
+    where : {}
+  })
+  const role_id = ""
+  //  Only proceed if the email is verified
+  const verified = isEmailVerified(email);
+  console.log("Email verified : ",verified)
+  if (!verified) {
+    throw new ApiError(403, "Email is not verified");
+  }
+
+   // Create the user record.
+  //  const newUser = await SuperAdmin.create({
+  //   full_name,
+  //   email,
+  //   role_id,
+  //   currency_id,
+  //   language_id,
+  //   profile_picture
+  //  })
+  
+
+});
+
 export {
   verifySuperAdminEmail,
   generateNewOtpForEmailVerification,
   verifyEmailViaOtp,
+  registerSuperAdmin,
 };
-
-// const verifySuperAdminEmail = asyncHandler(async (req, res) => {
-//   const { email } = req.body;
-//   const roleId = "7e207f29-a73b-4546-8ff8-30aea536b6b2";
-//   // ✅ Validate role_id as UUID
-//   if (!roleId || !isUUID(roleId)) {
-//     throw new ApiError(400, "Invalid role ID format");
-//   }
-
-//   const parser = new UAParser(req.headers["user-agent"]);
-//   const deviceInfo = parser.getResult();
-
-//   const verifyEmailRecord = await VerifyEmail.findOne({ where: { email } });
-
-//   if (verifyEmailRecord) {
-//     if (!verifyEmailRecord?.dataValues?.isEmailVerified) {
-
-//       throw new ApiError(
-//         409,
-//         `Email exists but is not verified. OTP has beed send to this email : ${email}  Enter OTP to verify the email.`
-//       );
-//     } else if (!verifyEmailRecord?.dataValues?.isUserCreated) {
-//       throw new ApiError(
-//         400,
-//         "Email already exists & verified but user not created fill the details to create the user"
-//       );
-//     } else {
-//       throw new ApiError(400, "Email already exists");
-//     }
-//   }
-
-//   const emailCreated = await VerifyEmail.create({
-//     email,
-//     role_id: roleId, // ✅ Valid UUID
-//   });
-
-//   // check for the existing OTP record (ordered by latest created)
-//   const existingOTP = await OTP.findOne({
-//     where: { verify_email_id: verifyEmailRecord.id },
-//   });
-
-//   let otpRecords;
-//   if (existingOTP) {
-//     if (new Date(existingOTP.expiresAt) <= new Date()) {
-//       // soft delete the expired otp
-//       await existingOTP.destroy();
-//       const generateRawOtp = rawOtp;
-//       // create a new OTP record
-//       otpRecords = await OTP.create({
-//         verify_email_id: verifyEmailRecord.id,
-//         roleId: roleId,
-//         rawOtp: generateRawOtp,
-//         purpose: "SIGNUP",
-//         expiresAt: otpExpiresAt(),
-//         maxAttempts: 5,
-//         ipAddress: req.ip,
-//         deviceInfo: JSON.stringify(deviceInfo),
-//       });
-//     } else {
-//       // If a valid OTP exists, you might want to return it or instruct the client to use it.
-//       throw new ApiError(
-//         409,
-//         "An OTP has already been sent and is still valid. Please check your email or request a new OTP if expired."
-//       );
-//     }
-//   } else {
-//     // No existing OTP record, so create one.
-//     const generateRawOtp = rawOtp;
-//     otpRecords = await OTP.create({
-//       verify_email_id: verifyEmailRecord.id,
-//       roleId: roleId,
-//       rawOtp: generateRawOtp,
-//       purpose: "SIGNUP",
-//       expiresAt: otpExpiresAt(), // 15 minutes from now
-//       maxAttempts: 5,
-//       ipAddress: req.ip,
-//       deviceInfo: JSON.stringify(deviceInfo),
-//     });
-//   }
-
-//   console.log("Email Created:", emailCreated);
-
-//   return res.json(new ApiResponse(200, { emailCreated }));
-// });

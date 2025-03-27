@@ -1,19 +1,19 @@
 import UserRole from "../models/user_roles.model.js";
 
 const roles = [
-  "Super Admin",
-  "School Owner",
-  "School Incharge",
+  "Super_Admin",
+  "School_Owner",
+  "School_Incharge",
   "Principal",
-  "School Coordinator",
+  "School_Coordinator",
   "Teacher",
   "Student",
-  "Finance Head",
-  "Finance Person",
+  "Finance_Head",
+  "Finance_Person",
   "Library",
   "Guards",
   "Store",
-  "House Keeping",
+  "House_Keeping",
   "Receptionist",
 ];
 
