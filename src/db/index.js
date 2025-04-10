@@ -21,19 +21,19 @@ const connectSequelize = async () => {
 };
 
 // // Sync database (Only for development, disable in production)
-// const syncDatabase = async () => {
-//   if (process.env.NODE_ENV === "development") {
-//     try {
-//       await sequelize.sync({ alter: true });  // Use { force: true } to drop and recreate tables
-//       console.log("✅ Database synced (tables created if not exist).");
-//     } catch (error) {
-//       console.error(`❌ Database Sync Error: ${error.message}`);
-//     }
-//   } else {
-//     console.log("⚠️ Database sync skipped in production. Use migrations.");
-//   }
-// };
-// syncDatabase();
+const syncDatabase = async () => {
+  if (process.env.NODE_ENV === "development") {
+    try {
+      await sequelize.sync({ alter: true });  // Use { force: true } to drop and recreate tables
+      console.log("✅ Database synced (tables created if not exist).");
+    } catch (error) {
+      console.error(`❌ Database Sync Error: ${error.message}`);
+    }
+  } else {
+    console.log("⚠️ Database sync skipped in production. Use migrations.");
+  }
+};
+syncDatabase();
 export { sequelize, connectSequelize };
 
 

@@ -11,7 +11,7 @@ const app = express();
 
 app.use(
   cors({
-    origin: process.env.CORS_ORIGIN,
+    origin: 'http://localhost:8080',
     credentials: true,
   })
 ); // middleware
@@ -33,20 +33,22 @@ app.post("/report-violation", express.json(), (req, res) => {
 // Use the custom Helmet middleware globally
 app.use(helmetMiddleware);
 
-import adminRouter from "./src/routes/admin/admin.routes.js";
-import commonRouter from "./src/routes/common/common.routes.js";
+// import adminRouter from "./src/routes/admin/admin.routes.js";
+// import commonRouter from "./src/routes/common/common.routes.js";
 import superadminRouter from "./src/routes/super_admin/super_admin.routes.js";
-
+import showuserRouter from './src/routes/show_users/show_user.route.js'
 import {
   ADMIN_BASE_URL,
   COMMON_BASE_URL,
   SUPER_ADMIN_URL,
+  APP_URL
 } from "./src/constants.js";
 
 // put the routes here
-app.use(ADMIN_BASE_URL, adminRouter);
-app.use(COMMON_BASE_URL, commonRouter);
+// app.use(ADMIN_BASE_URL, adminRouter);
+// app.use(COMMON_BASE_URL, commonRouter);
 app.use(SUPER_ADMIN_URL, superadminRouter);
+app.use(APP_URL, showuserRouter);
 
 // Error logger middleware (should be after all other middlewares and routes)
 app.use(errorLogger);

@@ -3,8 +3,6 @@ import { DataTypes, Op } from "sequelize";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 
-
-
 const Users = sequelize.define(
   "users",
   {
@@ -14,60 +12,22 @@ const Users = sequelize.define(
       defaultValue: DataTypes.UUIDV4,
       allowNull: false,
     },
-    user_role_id: {
-      type: DataTypes.UUID,
-      allowNull: false,
-      references: {
-        model: "user_role",
-        key: "user_role_id",
-      },
-      onDelete: "RESTRICT",
-      onUpdate: "CASCADE",
-    },
-    user_id: {
-      type: DataTypes.UUID,
-      allowNull: false,
-      onDelete: "RESTRICT",
-      onUpdate: "CASCADE",
-    },
-    user_session_id : {
-      type: DataTypes.UUID,
-      allowNull: false,
-      references : {
-        model : 'user_sessions',
-        key:'id'
-      },
-      onDelete: "RESTRICT",
-      onUpdate: "CASCADE",
-    },
-    // language_id: {
+
+    // user_id: {
     //   type: DataTypes.UUID,
-    //   allowNull: true,
-    // },
-    // currency_id: {
-    //   type: DataTypes.UUID,
-    //   allowNull: true,
-    // },
-    // ipAddresses: {
-    //   type: DataTypes.ARRAY(DataTypes.STRING),
     //   allowNull: false,
-    //   defaultValue: [],
-    //   validate: {
-    //     isValidIPs(value) {
-    //       if (!Array.isArray(value) || value.length > 2) {
-    //         throw new Error("A maximum of two valid IP addresses is allowed.");
-    //       }
-    //       for (const ip of value) {
-    //         if (!validateIPAddress(ip)) {
-    //           throw new Error(`Invalid IP address format: ${ip}`);
-    //         }
-    //       }
-    //     },
-    //   },
-    //   set(value) {
-    //     this.setDataValue("ipAddresses", value.slice(0, 2));
-    //   },
+    //   onDelete: "RESTRICT",
+    //   onUpdate: "CASCADE",
     // },
+    full_name: {
+      type: DataTypes.STRING,
+      allowNull: false,
+    },
+    email: {
+      type: DataTypes.STRING,
+
+      allowNull: false,
+    },
     password: {
       type: DataTypes.STRING,
       allowNull: false,
@@ -86,6 +46,16 @@ const Users = sequelize.define(
         },
       },
     },
+    accessToken: {
+      type: DataTypes.STRING,
+      allowNull: true,
+      validate: {
+        len: {
+          args: [20, 500],
+          msg: "Refresh token must be between 20 and 500 characters",
+        },
+      },
+    },
     refreshToken: {
       type: DataTypes.STRING,
       allowNull: true,
@@ -99,7 +69,7 @@ const Users = sequelize.define(
     isActive: {
       type: DataTypes.ENUM("active", "inactive", "suspended"),
       defaultValue: "active",
-      allowNull : false
+      allowNull: false,
     },
     lastUsedAt: {
       type: DataTypes.DATE,
@@ -110,11 +80,11 @@ const Users = sequelize.define(
   {
     tableName: "users",
     timestamps: true,
-    paranoid : true,
-    indexes: [
-      { unique: false, fields: ["user_role_id"] },
-      { unique: false, fields: ["isActive"] },
-    ],
+    paranoid: true,
+    // indexes: [
+    //   { unique: false, fields: ["user_role_id"] },
+    //   { unique: false, fields: ["isActive"] },
+    // ],
   }
 );
 
@@ -132,39 +102,39 @@ Users.isPasswordCorrect = async function (password) {
   return bcrypt.compare(password, this.password);
 };
 
-// Users.generateAccessToken = function () {
-//   return jwt.sign(
-//     {
-//       id: this.user_id,
-//       role_id: this .user_role_id,
-//     },
-//     process.env.ACCESS_TOKEN_SECRET,
-//     { expiresIn: process.env.ACCESS_TOKEN_EXPIRES }
-//   );
-// };
+Users.prototype.generateAccessToken = function () {
+  return jwt.sign(
+    {
+      id: this.id,
+      // role_id: this .user_role_id,
+    },
+    process.env.ACCESS_TOKEN_SECRET,
+    { expiresIn: process.env.ACCESS_TOKEN_EXPIRES }
+  );
+};
 
-// Users.generateRefreshToken = function () {
-//   return jwt.sign(
-//     {
-//       id: this.user_id,
-//     },
-//     process.env.REFRESH_TOKEN_SECRET,
-//     {
-//       expiresIn: process.env.REFRESH_TOKEN_EXPIRES,
-//     }
-//   );
-// };
+Users.prototype.generateRefreshToken = function () {
+  return jwt.sign(
+    {
+      id: this.id,
+    },
+    process.env.REFRESH_TOKEN_SECRET,
+    {
+      expiresIn: process.env.REFRESH_TOKEN_EXPIRES,
+    }
+  );
+};
 
 Users.markInactiveUsers = async function () {
   const sixMonthsAgo = new Date();
   sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
 
   await Users.update(
-    { isActive: 'inactive' },
+    { isActive: "inactive" },
     {
       where: {
         lastUsedAt: { [Op.lt]: sixMonthsAgo },
-        isActive: 'active',
+        isActive: "active",
       },
     }
   );
